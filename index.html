@@ -271,6 +271,12 @@
                 state.sourceText = docs.map(d => `\n=== DOCUMENTO: ${d.name} ===\n${d.content}`).join('\n');
                 updateFilesUI(docs);
                 enableStep(2);
+                
+                // --- CORRECCIÓN: HABILITAR BOTÓN SIGUIENTE ---
+                const btn = getEl('btnToStep2');
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                // ---------------------------------------------
             }
 
             // 2. Load Session (Chat History)
