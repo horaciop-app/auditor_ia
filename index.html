@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Auditor de Seguridad AI - Enterprise</title>
+    <title>Framework de Auditoría AI v3.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- PDF.js para leer archivos PDF -->
+    <!-- PDF.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -22,8 +22,7 @@
             border-top: 3px solid #3b82f6;
             width: 20px;
             height: 20px;
-            -webkit-animation: spin 1s linear infinite; /* Safari */
-            animation: spin 1s linear infinite;
+            -webkit-animation: spin 1s linear infinite; animation: spin 1s linear infinite;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .scrollbar-thin::-webkit-scrollbar { width: 6px; }
@@ -37,67 +36,68 @@
     <header class="bg-slate-900 text-white p-4 shadow-lg sticky top-0 z-50">
         <div class="container mx-auto flex justify-between items-center">
             <h1 class="text-xl font-bold flex items-center gap-2">
-                <i class="fas fa-shield-alt text-blue-400"></i> Auditoría Securitas AI
+                <i class="fas fa-shield-alt text-blue-400"></i> Framework de Auditoría AI
             </h1>
-            <div class="text-sm text-slate-400 hidden sm:block">v2.1 (High Capacity Storage)</div>
+            <div class="flex items-center gap-3">
+                <span class="text-xs bg-blue-900 px-2 py-1 rounded text-blue-200 border border-blue-800">
+                    <i class="fas fa-save"></i> Auto-Guardado Activo
+                </span>
+                <div class="text-sm text-slate-400 hidden sm:block">v3.0 (Sesiones Persistentes)</div>
+            </div>
         </div>
     </header>
 
     <!-- Main Content -->
     <main class="flex-grow container mx-auto p-4 md:p-8 max-w-4xl">
         
-        <!-- API Key Configuration -->
+        <!-- API Key -->
         <div id="apiKeySection" class="mb-8 bg-white p-6 rounded-lg shadow-sm border border-slate-200 border-l-4 border-l-blue-500">
             <div class="flex justify-between items-center mb-2">
-                <label class="block text-sm font-bold text-slate-700">Paso 0: Configuración de IA</label>
-                <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-200 hover:bg-blue-100 transition flex items-center gap-1">
-                    <i class="fas fa-key"></i> Obtener API Key
-                </a>
+                <label class="block text-sm font-bold text-slate-700">Configuración de IA (Google Gemini)</label>
+                <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-xs text-blue-600 hover:underline flex items-center gap-1"><i class="fas fa-external-link-alt"></i> Conseguir Key</a>
             </div>
-            <div class="flex gap-2">
-                <input type="password" id="apiKeyInput" placeholder="Pega tu Gemini API Key aquí (AIza...)" class="flex-1 p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm">
-            </div>
+            <input type="password" id="apiKeyInput" placeholder="Pega tu Gemini API Key aquí..." class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm">
         </div>
 
         <!-- Progress Steps -->
-        <div class="flex justify-between mb-8 text-sm font-medium">
-            <div id="step1-ind" class="flex flex-col items-center step-active w-1/3 cursor-pointer" onclick="if(!this.classList.contains('step-inactive')) showStep(1)">
-                <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center mb-1 bg-white transition-all">1</div>
-                <span>Fuentes</span>
+        <div class="flex justify-between mb-8 text-sm font-medium select-none">
+            <div id="step1-ind" class="flex flex-col items-center step-active w-1/3 cursor-pointer transition-all" onclick="if(!this.classList.contains('step-inactive')) showStep(1)">
+                <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center mb-1 bg-white">1</div>
+                <span>Fuentes (Contexto)</span>
             </div>
-            <div id="step2-ind" class="flex flex-col items-center step-inactive w-1/3">
-                <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center mb-1 bg-white transition-all">2</div>
+            <div id="step2-ind" class="flex flex-col items-center step-inactive w-1/3 cursor-pointer transition-all" onclick="if(!this.classList.contains('step-inactive')) showStep(2)">
+                <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center mb-1 bg-white">2</div>
                 <span>Cuestionario</span>
             </div>
-            <div id="step3-ind" class="flex flex-col items-center step-inactive w-1/3">
-                <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center mb-1 bg-white transition-all">3</div>
-                <span>Resultados</span>
+            <div id="step3-ind" class="flex flex-col items-center step-inactive w-1/3 cursor-pointer transition-all" onclick="if(!this.classList.contains('step-inactive')) showStep(3)">
+                <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center mb-1 bg-white">3</div>
+                <span>Auditoría</span>
             </div>
         </div>
 
-        <!-- STEP 1: Upload Knowledge Base -->
+        <!-- STEP 1: Knowledge Base -->
         <div id="step1" class="step-content bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-semibold text-slate-800">1. Base de Conocimiento</h2>
-                <button onclick="clearKnowledgeBase()" class="text-xs text-red-500 hover:text-red-700 border border-red-200 px-2 py-1 rounded hover:bg-red-50 transition">
-                    <i class="fas fa-trash-alt"></i> Borrar Memoria
+                <h2 class="text-lg font-semibold text-slate-800">1. Base de Conocimiento (Normativas)</h2>
+                <button onclick="clearDB('documents')" class="text-xs text-red-500 hover:bg-red-50 border border-red-200 px-2 py-1 rounded transition">
+                    <i class="fas fa-trash"></i> Borrar Fuentes
                 </button>
             </div>
             
-            <p class="text-slate-600 mb-4 text-sm">Suba manuales y políticas. <span class="text-green-600 font-bold text-xs ml-2 bg-green-100 px-2 py-0.5 rounded">Alta Capacidad Activada</span></p>
+            <p class="text-slate-600 mb-4 text-sm">Sube aquí tus manuales, políticas ISO, o reglamentos internos.</p>
             
             <div class="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:bg-slate-50 transition-colors cursor-pointer relative group">
                 <input type="file" id="sourcePdf" accept="application/pdf" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="handleSourceUpload()">
                 <div class="flex flex-col items-center pointer-events-none">
                     <i class="fas fa-database text-4xl text-slate-400 mb-3 group-hover:text-blue-500 transition-colors"></i>
-                    <span class="text-slate-600 font-medium">Agregar PDFs a Base de Datos</span>
+                    <span class="text-slate-600 font-medium">Añadir Documentos a la BD</span>
                 </div>
             </div>
             
             <div id="filesListContainer" class="hidden mt-4 bg-slate-50 rounded-lg border border-slate-200 p-4">
                 <h4 class="text-xs font-bold text-slate-500 uppercase mb-2 flex justify-between">
-                    Archivos en DB:
-                    <span class="text-slate-400 font-normal text-[10px]" id="storageSize">Cargando...</span>
+                    Archivos Indexados:
+                    <span class="text-slate-400 font-normal text-[10px]" id="storageSize">...</span>
                 </h4>
                 <ul id="uploadedFilesList" class="space-y-1 text-sm text-slate-700 max-h-40 overflow-y-auto scrollbar-thin"></ul>
             </div>
@@ -113,424 +113,484 @@
             </div>
         </div>
 
-        <!-- STEP 2: Upload Questions -->
+        <!-- STEP 2: Questions Setup -->
         <div id="step2" class="hidden step-content bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <h2 class="text-lg font-semibold mb-4 text-slate-800">2. Cargar Cuestionario</h2>
-            
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold text-slate-800">2. Cargar Cuestionario</h2>
+                <button onclick="clearDB('questions')" class="text-xs text-orange-500 hover:bg-orange-50 border border-orange-200 px-2 py-1 rounded transition">
+                    <i class="fas fa-eraser"></i> Reiniciar Auditoría
+                </button>
+            </div>
+
             <div class="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:bg-slate-50 transition-colors cursor-pointer relative">
                 <input type="file" id="questionPdf" accept="application/pdf" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleQuestionUpload()">
                 <div class="flex flex-col items-center">
                     <i class="fas fa-file-contract text-4xl text-slate-400 mb-3"></i>
-                    <span class="text-slate-600 font-medium">Sube el PDF del Cuestionario</span>
+                    <span class="text-slate-600 font-medium">Sube el PDF de Preguntas</span>
                     <span id="questionFileName" class="text-blue-600 text-sm mt-2 font-semibold"></span>
                 </div>
             </div>
 
             <div id="questionsListArea" class="hidden mt-6">
                 <h3 class="text-md font-bold text-slate-700 mb-2 flex justify-between items-center">
-                    Preguntas Detectadas
+                    Alcance de Auditoría
                     <span id="qCount" class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">0</span>
                 </h3>
                 <div id="questionsList" class="bg-slate-50 p-4 rounded border border-slate-200 max-h-60 overflow-y-auto space-y-2 text-sm scrollbar-thin"></div>
             </div>
 
             <div id="extractingLoader" class="hidden mt-4 flex items-center justify-center text-blue-600 gap-2">
-                <div class="loader"></div> Analizando PDF...
+                <div class="loader"></div> Analizando estructura...
             </div>
 
             <div class="mt-6 flex justify-between">
                 <button onclick="showStep(1)" class="text-slate-500 hover:text-slate-700 font-medium px-4 py-2">Atrás</button>
                 <button id="btnAnalyze" onclick="extractQuestions()" class="bg-slate-800 hover:bg-slate-900 text-white px-6 py-2 rounded-lg font-medium hidden shadow transition-all">
-                    Analizar Preguntas
+                    Analizar PDF
                 </button>
                 <button id="btnToStep3" onclick="startQueueProcessing()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium hidden shadow-lg shadow-green-200 transform hover:-translate-y-1 transition-all">
-                    Generar Informe <i class="fas fa-play ml-1"></i>
+                    Comenzar/Reanudar <i class="fas fa-play ml-1"></i>
                 </button>
             </div>
         </div>
 
-        <!-- STEP 3: Results -->
+        <!-- STEP 3: Execution & Results -->
         <div id="step3" class="hidden step-content bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                    3. Informe de Auditoría
-                    <span id="progressBadge" class="text-xs font-normal bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Pendiente</span>
-                </h2>
-                <button id="btnStop" onclick="stopProcessing()" class="hidden text-xs bg-red-100 text-red-600 border border-red-200 px-3 py-1 rounded font-bold hover:bg-red-200 transition">
-                    <i class="fas fa-stop-circle"></i> DETENER
-                </button>
+            <div class="flex justify-between items-center mb-4 bg-slate-50 p-3 rounded border border-slate-100 sticky top-0 z-10">
+                <div>
+                    <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                        3. Resultados
+                    </h2>
+                    <div class="text-xs text-slate-500" id="progressStats">Estado: Listo</div>
+                </div>
+                
+                <div class="flex gap-2">
+                     <button id="btnStop" onclick="stopProcessing()" class="hidden text-xs bg-red-100 text-red-600 border border-red-200 px-3 py-1 rounded font-bold hover:bg-red-200">
+                        <i class="fas fa-stop"></i> PAUSAR
+                    </button>
+                    <button id="btnResume" onclick="startQueueProcessing()" class="hidden text-xs bg-green-100 text-green-700 border border-green-200 px-3 py-1 rounded font-bold hover:bg-green-200">
+                        <i class="fas fa-play"></i> REANUDAR
+                    </button>
+                </div>
             </div>
             
-            <div class="flex gap-2 mb-4 flex-wrap">
-                 <button onclick="copyAllResults()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1 rounded border border-slate-300 transition">
+            <div class="flex gap-2 mb-6 flex-wrap">
+                 <button onclick="copyAllResults()" class="text-xs bg-white hover:bg-slate-50 text-slate-700 px-3 py-1 rounded border border-slate-300 shadow-sm">
                     <i class="fas fa-copy"></i> Copiar
                 </button>
-                <button onclick="window.print()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1 rounded border border-slate-300 transition">
+                <button onclick="window.print()" class="text-xs bg-white hover:bg-slate-50 text-slate-700 px-3 py-1 rounded border border-slate-300 shadow-sm">
                     <i class="fas fa-print"></i> Imprimir
                 </button>
-                <button onclick="sendEmail()" class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1 rounded border border-blue-200 font-semibold transition">
-                    <i class="fas fa-envelope"></i> Email
+                <button onclick="sendEmail()" class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1 rounded border border-blue-200 font-semibold shadow-sm">
+                    <i class="fas fa-envelope"></i> Exportar Email
                 </button>
             </div>
 
-            <div id="resultsContainer" class="space-y-6 pb-20"></div>
+            <div id="resultsContainer" class="space-y-6 pb-20 min-h-[300px]">
+                <!-- Cards injected here -->
+            </div>
+            
             <div class="mt-6 flex justify-start">
                 <button onclick="showStep(2)" class="text-slate-500 hover:text-slate-700 font-medium px-4 py-2">Atrás</button>
             </div>
         </div>
     </main>
 
-    <footer class="bg-slate-50 p-4 text-center text-slate-400 text-xs">
-        AI Security Auditor v2.1 - Powered by IndexedDB & Gemini
-    </footer>
-
     <script>
-        // --- INDEXED DB MANAGER (The fix for memory issues) ---
-        const DB_NAME = 'AuditorDB';
-        const STORE_NAME = 'documents';
+        // --- DATABASE V2 (High Capacity + Sessions) ---
+        const DB_NAME = 'AuditorDB_v3'; // Changed name to force fresh V3 DB
         const DB_VERSION = 1;
+        const STORE_DOCS = 'documents';
+        const STORE_QUESTIONS = 'questions'; // Persistent Session Store
 
         const dbPromise = new Promise((resolve, reject) => {
             const request = indexedDB.open(DB_NAME, DB_VERSION);
             request.onupgradeneeded = (e) => {
                 const db = e.target.result;
-                if (!db.objectStoreNames.contains(STORE_NAME)) {
-                    db.createObjectStore(STORE_NAME, { keyPath: 'name' });
-                }
+                if (!db.objectStoreNames.contains(STORE_DOCS)) db.createObjectStore(STORE_DOCS, { keyPath: 'name' });
+                if (!db.objectStoreNames.contains(STORE_QUESTIONS)) db.createObjectStore(STORE_QUESTIONS, { keyPath: 'id' });
             };
             request.onsuccess = (e) => resolve(e.target.result);
             request.onerror = (e) => reject(e.target.error);
         });
 
-        async function saveDocToDB(name, content) {
+        // Generic DB Utils
+        async function dbOp(mode, storeName, callback) {
             const db = await dbPromise;
             return new Promise((resolve, reject) => {
-                const tx = db.transaction(STORE_NAME, 'readwrite');
-                const store = tx.objectStore(STORE_NAME);
-                store.put({ name, content });
-                tx.oncomplete = () => resolve();
+                const tx = db.transaction(storeName, mode);
+                const store = tx.objectStore(storeName);
+                const request = callback(store);
+                tx.oncomplete = () => resolve(request?.result);
                 tx.onerror = () => reject(tx.error);
+                if (request && request.onsuccess === null) { // For gets/getAll
+                    request.onsuccess = () => {}; // managed by transaction result usually, but for read ops needs care
+                }
             });
         }
-
-        async function loadDocsFromDB() {
+        
+        async function saveDoc(name, content) { await dbOp('readwrite', STORE_DOCS, s => s.put({name, content})); }
+        async function loadDocs() { 
             const db = await dbPromise;
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction(STORE_NAME, 'readonly');
-                const store = tx.objectStore(STORE_NAME);
-                const request = store.getAll();
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = () => reject(request.error);
+            return new Promise(resolve => {
+                db.transaction(STORE_DOCS).objectStore(STORE_DOCS).getAll().onsuccess = (e) => resolve(e.target.result);
             });
         }
-
-        async function clearDB() {
-            const db = await dbPromise;
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction(STORE_NAME, 'readwrite');
-                const store = tx.objectStore(STORE_NAME);
-                store.clear();
-                tx.oncomplete = () => resolve();
-                tx.onerror = () => reject(tx.error);
+        
+        // Session Management (The "Chat" saver)
+        async function saveQuestionState(qObj) { await dbOp('readwrite', STORE_QUESTIONS, s => s.put(qObj)); }
+        async function loadQuestionsState() {
+             const db = await dbPromise;
+            return new Promise(resolve => {
+                db.transaction(STORE_QUESTIONS).objectStore(STORE_QUESTIONS).getAll().onsuccess = (e) => resolve(e.target.result);
             });
         }
+        
+        async function clearDB(storeName) {
+            if(!confirm("¿Estás seguro? Se borrarán los datos de " + (storeName === STORE_DOCS ? "fuentes" : "la auditoría actual") + ".")) return;
+            await dbOp('readwrite', storeName, s => s.clear());
+            window.location.reload();
+        }
 
-        // --- STATE ---
+        // --- APP STATE ---
         let state = {
-            apiKey: '',
-            sourceText: '', // Will be built from DB
-            docsMetadata: [], // {name, size}
-            questions: [], 
-            abortController: null,
+            apiKey: localStorage.getItem('ai_auditor_key') || '',
+            sourceText: '',
+            questions: [], // {id, text, status, answer, errorMsg, attempts, feedback}
+            abortCtrl: null,
             isProcessing: false
         };
 
         // --- INITIALIZATION ---
-        window.onload = async function() { 
-            // Load API Key from LocalStorage (it's small, so it's fine)
-            const savedKey = localStorage.getItem('ai_auditor_apikey');
-            if(savedKey) { state.apiKey = savedKey; getEl('apiKeyInput').value = savedKey; }
+        window.onload = async function() {
+            if(state.apiKey) getEl('apiKeyInput').value = state.apiKey;
             
-            // Load Big Data from IndexedDB
-            await refreshDataFromDB();
+            // 1. Load Sources (Context)
+            const docs = await loadDocs();
+            if(docs.length > 0) {
+                state.sourceText = docs.map(d => `\n=== DOCUMENTO: ${d.name} ===\n${d.content}`).join('\n');
+                updateFilesUI(docs);
+                enableStep(2);
+            }
+
+            // 2. Load Session (Chat History)
+            const savedQuestions = await loadQuestionsState();
+            if(savedQuestions.length > 0) {
+                // Restore session
+                state.questions = savedQuestions.sort((a,b) => {
+                    // Try sort numerically if IDs are numbers, else alphabetical
+                    return a.id.localeCompare(b.id, undefined, {numeric: true});
+                });
+                
+                updateQuestionsUI();
+                renderResultsUI(); // Restore the chat cards
+                enableStep(3);
+                
+                // Check if audit was incomplete
+                const pending = state.questions.filter(q => q.status === 'pending');
+                if(pending.length > 0) {
+                    getEl('btnResume').classList.remove('hidden');
+                    getEl('progressStats').textContent = `Sesión recuperada: ${pending.length} pendientes.`;
+                } else {
+                     getEl('progressStats').textContent = `Sesión recuperada: Auditoría completa.`;
+                }
+            }
         };
 
-        async function refreshDataFromDB() {
-            try {
-                const docs = await loadDocsFromDB();
-                state.sourceText = docs.map(d => `\n\n=== DOC: ${d.name} ===\n${d.content}`).join('');
-                state.docsMetadata = docs.map(d => ({name: d.name}));
-                
-                updateFilesListUI();
-                if(state.docsMetadata.length > 0) enableStep2();
-                else disableStep2();
-            } catch(e) {
-                console.error("Error loading DB", e);
-            }
-        }
-
-        async function clearKnowledgeBase() {
-            if(confirm("¿Borrar todas las fuentes de la base de datos?")) {
-                await clearDB();
-                await refreshDataFromDB();
-                alert("Memoria liberada.");
-            }
-        }
-
-        // --- UI HELPERS ---
-        function getEl(id) { return document.getElementById(id); }
-        function enableStep2() { getEl('btnToStep2').disabled = false; getEl('btnToStep2').classList.remove('opacity-50', 'cursor-not-allowed'); }
-        function disableStep2() { getEl('btnToStep2').disabled = true; getEl('btnToStep2').classList.add('opacity-50', 'cursor-not-allowed'); }
-
-        function updateFilesListUI() {
-            const listContainer = getEl('filesListContainer');
-            const listEl = getEl('uploadedFilesList');
-            getEl('storageSize').textContent = `~${(state.sourceText.length / 1024 / 1024).toFixed(2)} MB de texto`;
-
-            if (state.docsMetadata.length > 0) {
-                listContainer.classList.remove('hidden');
-                listEl.innerHTML = '';
-                state.docsMetadata.forEach(d => {
-                    const li = document.createElement('li');
-                    li.className = "flex items-center text-slate-600 bg-white border border-slate-100 px-2 py-1 rounded justify-between";
-                    li.innerHTML = `<span class="flex items-center"><i class="fas fa-database text-blue-500 mr-2 text-xs"></i> ${d.name}</span>`;
-                    listEl.appendChild(li);
-                });
-            } else { listContainer.classList.add('hidden'); }
-        }
-
-        function showStep(stepNumber) {
-            ['step1', 'step2', 'step3'].forEach(id => getEl(id).classList.add('hidden'));
-            getEl('step' + stepNumber).classList.remove('hidden');
-            // Update indicators logic (omitted for brevity, same as before)
-        }
-
-        // --- LOGIC: PDF Handling ---
+        // --- STEP 1: SOURCES ---
         async function extractTextFromPDF(file) {
-            const arrayBuffer = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-            let fullText = '';
-            for (let i = 1; i <= pdf.numPages; i++) {
+            const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+            let txt = '';
+            for(let i=1; i<=pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
-                const textContent = await page.getTextContent();
-                fullText += `\n[Pág ${i}] ` + textContent.items.map(item => item.str).join(' ');
+                const content = await page.getTextContent();
+                txt += ` [Pág ${i}] ` + content.items.map(i=>i.str).join(' ');
             }
-            return fullText;
+            return txt;
         }
 
         async function handleSourceUpload() {
-            const files = Array.from(getEl('sourcePdf').files); 
-            if (files.length === 0) return;
+            const files = getEl('sourcePdf').files;
+            if(!files.length) return;
             
             getEl('sourceProcessing').classList.remove('hidden');
-            disableStep2();
             
-            try {
-                for (const file of files) {
-                    // Check duplicates in metadata
-                    if(state.docsMetadata.some(d => d.name === file.name)) continue;
-
-                    getEl('procText').textContent = `Procesando ${file.name}...`;
-                    const text = await extractTextFromPDF(file);
-                    
-                    // Save to IDB immediately
-                    await saveDocToDB(file.name, text);
-                }
-                
-                // Reload global state from DB
-                await refreshDataFromDB();
-
-            } catch (e) { alert('Error leyendo PDF: ' + e.message); }
+            for(const file of files) {
+                getEl('procText').textContent = `Indexando ${file.name}...`;
+                const text = await extractTextFromPDF(file);
+                await saveDoc(file.name, text);
+            }
             
-            getEl('sourceProcessing').classList.add('hidden');
-            getEl('sourcePdf').value = ''; 
+            window.location.reload(); // Simple refresh to load new state properly
         }
 
+        function updateFilesUI(docs) {
+            getEl('filesListContainer').classList.remove('hidden');
+            getEl('storageSize').textContent = docs.length + " Docs";
+            const list = getEl('uploadedFilesList');
+            list.innerHTML = '';
+            docs.forEach(d => {
+                list.innerHTML += `<li class="flex items-center bg-slate-100 p-1 rounded"><i class="fas fa-check-circle text-green-500 mr-2"></i> ${d.name}</li>`;
+            });
+        }
+
+        // --- STEP 2: QUESTIONS ---
         function goToStep2() {
-            state.apiKey = getEl('apiKeyInput').value.trim();
-            if (!state.apiKey) { alert("Falta API Key"); getEl('apiKeyInput').focus(); return; }
-            localStorage.setItem('ai_auditor_apikey', state.apiKey);
+            const key = getEl('apiKeyInput').value.trim();
+            if(!key) return alert("Necesitas la API Key de Google Gemini.");
+            localStorage.setItem('ai_auditor_key', key);
+            state.apiKey = key;
             showStep(2);
         }
 
-        // --- QUESTION LOGIC (Standard) ---
         async function handleQuestionUpload() {
-            const file = getEl('questionPdf').files[0];
-            if (file) {
-                getEl('questionFileName').textContent = file.name;
-                getEl('btnAnalyze').classList.remove('hidden');
-            }
+            getEl('questionFileName').textContent = getEl('questionPdf').files[0]?.name;
+            getEl('btnAnalyze').classList.remove('hidden');
         }
 
         async function extractQuestions() {
             const file = getEl('questionPdf').files[0];
-            if (!file) return;
+            if(!file) return;
+            
             getEl('extractingLoader').classList.remove('hidden');
-            getEl('btnAnalyze').classList.add('hidden');
-            getEl('questionsListArea').classList.add('hidden');
-
+            
             try {
-                const qText = await extractTextFromPDF(file);
-                const prompt = `EXTRAE las preguntas de auditoría de este texto. Devuelve SOLO un JSON: [{"id": "1", "text": "Pregunta..."}]. Si hay ID original, úsalo. TEXTO: ${qText.substring(0, 30000)}`; 
+                const text = await extractTextFromPDF(file);
+                const prompt = `Extrae preguntas de auditoría. JSON Array: [{"id":"1","text":"Pregunta"}]. Texto: ${text.substring(0,30000)}`;
+                const jsonStr = await callGemini(prompt, true);
+                const cleanJson = jsonStr.replace(/```json|```/g, '').trim();
+                
+                const newQuestions = JSON.parse(cleanJson).map(q => ({
+                    ...q, status: 'pending', attempts: 0, answer: null
+                }));
 
-                const response = await callGemini(prompt, true);
-                const cleanJson = response.replace(/```json/g, '').replace(/```/g, '').trim();
+                // Clear old session and save new
+                await dbOp('readwrite', STORE_QUESTIONS, s => s.clear());
+                for(const q of newQuestions) await saveQuestionState(q);
                 
-                state.questions = JSON.parse(cleanJson).map(q => ({ ...q, status: 'pending', attempts: 0 }));
+                state.questions = newQuestions;
+                updateQuestionsUI();
                 
-                renderQuestionsList();
                 getEl('extractingLoader').classList.add('hidden');
-                getEl('questionsListArea').classList.remove('hidden');
                 getEl('btnToStep3').classList.remove('hidden');
-            } catch (e) {
-                alert("Error extrayendo: " + e.message);
+                getEl('questionsListArea').classList.remove('hidden');
+
+            } catch(e) {
+                alert("Error: " + e.message);
                 getEl('extractingLoader').classList.add('hidden');
-                getEl('btnAnalyze').classList.remove('hidden');
             }
         }
 
-        function renderQuestionsList() {
-            const listEl = getEl('questionsList');
-            listEl.innerHTML = '';
+        function updateQuestionsUI() {
             getEl('qCount').textContent = state.questions.length;
+            const list = getEl('questionsList');
+            list.innerHTML = '';
             state.questions.forEach(q => {
-                const div = document.createElement('div');
-                div.className = "p-2 bg-white border border-slate-100 rounded flex gap-3 text-xs";
-                div.innerHTML = `<span class="font-bold text-blue-600 whitespace-nowrap min-w-[30px]">${q.id}</span><span>${q.text}</span>`;
-                listEl.appendChild(div);
+                list.innerHTML += `<div class="flex gap-2 text-xs p-1 border-b"><b class="text-blue-600 min-w-[30px]">${q.id}</b> <span>${q.text}</span></div>`;
             });
         }
 
-        // --- PROCESSING LOGIC (Queue & Retry) ---
+        // --- STEP 3: EXECUTION LOOP (The Core) ---
         async function startQueueProcessing() {
             showStep(3);
-            state.abortController = new AbortController();
             state.isProcessing = true;
+            state.abortCtrl = new AbortController();
+            
             getEl('btnStop').classList.remove('hidden');
+            getEl('btnResume').classList.add('hidden');
             
-            const container = getEl('resultsContainer');
-            container.innerHTML = '';
+            // Ensure UI is populated (important for resume)
+            renderResultsUI(); 
+
+            // Find pending questions
+            const pending = state.questions.filter(q => q.status === 'pending' || q.status === 'retry');
             
-            // Initial Render
-            state.questions.forEach((q) => {
-                const card = document.createElement('div');
-                card.id = `card-${q.id}`;
-                card.className = "bg-white p-6 rounded-lg shadow border-l-4 border-slate-300";
-                card.innerHTML = `
-                    <div class="flex justify-between mb-2">
-                        <span class="font-bold text-lg text-slate-800">${q.id}</span>
-                        <span class="text-xs text-slate-400 status-text">En cola...</span>
-                    </div>
-                    <p class="font-medium text-slate-700 mb-4">${q.text}</p>
-                    <div class="answer-area text-sm text-slate-500">Esperando turno...</div>
-                `;
-                container.appendChild(card);
-            });
-
-            let queue = state.questions.map((q, i) => i);
-
-            while(queue.length > 0) {
+            for (const q of pending) {
                 if(!state.isProcessing) break;
-                const idx = queue.shift();
-                const q = state.questions[idx];
-                const card = getEl(`card-${q.id}`);
-
-                card.scrollIntoView({behavior: "smooth", block: "center"});
-                card.classList.add('animate-pulse');
-                card.querySelector('.status-text').innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> Analizando...`;
-                getEl('progressBadge').textContent = `Pendientes: ${queue.length + 1}`;
+                
+                // UI Update: Working on specific card
+                const card = document.getElementById(`card-${q.id}`);
+                if(card) {
+                    card.scrollIntoView({behavior: 'smooth', block: 'center'});
+                    card.querySelector('.status-indicator').innerHTML = `<i class="fas fa-circle-notch fa-spin text-blue-500"></i> Analizando...`;
+                    card.classList.add('border-blue-400', 'shadow-md');
+                }
+                
+                getEl('progressStats').textContent = `Procesando ID ${q.id}... (${pending.indexOf(q)}/${pending.length} pendientes)`;
 
                 try {
-                    const answer = await askQuestionToGemini(q.text, state.sourceText, state.abortController.signal);
+                    const answer = await askGemini(q.text, state.sourceText, state.abortCtrl.signal);
+                    
+                    // Update State & DB
                     q.status = 'done';
-                    renderSuccessCard(card, q, answer);
-                } catch (e) {
-                    if (e.name === 'AbortError') break;
+                    q.answer = answer;
+                    await saveQuestionState(q); // PERMANENT SAVE
+                    
+                    // Update UI
+                    renderCardContent(card, q);
+
+                } catch(e) {
+                    if(e.name === 'AbortError') break;
+                    
                     q.attempts++;
-                    card.classList.remove('animate-pulse');
-                    if (q.attempts < 3) {
-                        queue.push(idx); 
-                        card.querySelector('.status-text').textContent = `Reintentando (${q.attempts}/3)`;
-                        card.querySelector('.answer-area').textContent = `Error temporal: ${e.message}.`;
+                    if(q.attempts < 3) {
+                        q.status = 'retry';
+                        card.querySelector('.status-indicator').textContent = `Reintentando (${q.attempts})...`;
                     } else {
-                        card.className = "bg-white p-6 rounded-lg shadow border-l-4 border-red-500";
-                        card.querySelector('.status-text').textContent = "Fallido";
-                        card.querySelector('.answer-area').textContent = `Error: ${e.message}`;
+                        q.status = 'error';
+                        q.answer = "Error: " + e.message;
+                        card.classList.add('border-red-500');
                     }
+                    await saveQuestionState(q); // Save error state
                 }
+                
+                if(card) card.classList.remove('border-blue-400', 'shadow-md');
             }
+            
             state.isProcessing = false;
             getEl('btnStop').classList.add('hidden');
-            getEl('progressBadge').textContent = "Finalizado";
+            getEl('progressStats').textContent = "Proceso detenido o finalizado.";
+            
+            // If fully done
+            if(!state.questions.some(q => q.status === 'pending')) {
+                 getEl('progressStats').innerHTML = '<span class="text-green-600 font-bold"><i class="fas fa-check"></i> Auditoría Completa</span>';
+            } else {
+                 getEl('btnResume').classList.remove('hidden');
+            }
         }
 
-        function stopProcessing() { if(state.abortController) state.abortController.abort(); state.isProcessing = false; }
+        function stopProcessing() {
+            if(state.abortCtrl) state.abortCtrl.abort();
+            state.isProcessing = false;
+        }
 
-        function renderSuccessCard(card, q, answerText) {
-            card.className = "bg-white p-6 rounded-lg shadow border-l-4 border-blue-500 transition-all";
-            card.classList.remove('animate-pulse');
-            card.innerHTML = `
-                <div class="flex justify-between mb-2 border-b border-slate-100 pb-2">
-                    <span class="font-bold text-lg text-blue-900">Pregunta ${q.id}</span>
-                    <div class="flex items-center gap-2">
-                        <span class="text-xs text-green-600 font-bold"><i class="fas fa-check"></i> Listo</span>
-                        <button onclick="toggleIncorrectForm('${q.id}')" class="text-xs border border-red-200 text-red-500 hover:bg-red-50 px-2 py-1 rounded"><i class="fas fa-flag"></i> Incorrecto</button>
-                    </div>
-                </div>
-                <p class="font-medium text-slate-800 mb-4 bg-slate-50 p-2 rounded border border-slate-100">${q.text}</p>
-                <div class="text-slate-600 text-sm leading-relaxed answer-content">${answerText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>')}</div>
+        // --- UI RENDERING ---
+        function renderResultsUI() {
+            const container = getEl('resultsContainer');
+            // Only add missing cards to preserve DOM state if possible, 
+            // or mostly just rebuild for simplicity in this v3.
+            // For robustness, we clear and rebuild, scrolling is handled by loop.
+            container.innerHTML = '';
+            
+            state.questions.forEach(q => {
+                const card = document.createElement('div');
+                card.id = `card-${q.id}`;
+                card.className = "bg-white p-4 rounded border border-slate-200 text-sm transition-all duration-300";
                 
-                <div id="feedback-form-${q.id}" class="hidden mt-4 p-3 bg-red-50 border border-red-100 rounded">
-                    <p class="text-xs font-bold text-red-700 mb-2">¿Por qué es incorrecta?</p>
-                    <textarea id="feedback-text-${q.id}" class="w-full p-2 border border-red-200 rounded text-sm mb-2"></textarea>
-                    <button onclick="reprocessQuestion('${q.id}')" class="text-xs bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700">Reprocesar</button>
-                </div>
-            `;
+                // Header
+                let html = `
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">${q.id}</span>
+                            <span class="status-indicator text-xs text-slate-400">
+                                ${getStatusIcon(q.status)}
+                            </span>
+                        </div>
+                        <div class="actions opacity-50 hover:opacity-100 transition-opacity">
+                            <button onclick="flagIncorrect('${q.id}')" class="text-xs text-red-400 hover:text-red-600" title="Marcar incorrecto"><i class="fas fa-flag"></i></button>
+                        </div>
+                    </div>
+                    <p class="text-slate-800 font-medium mb-3">${q.text}</p>
+                    <div class="answer-body text-slate-600 leading-relaxed border-t pt-2 mt-2 border-slate-50">
+                        ${q.answer ? formatMD(q.answer) : '<span class="text-slate-300 italic">Pendiente de análisis...</span>'}
+                    </div>
+                    
+                    <!-- Feedback Form Hidden -->
+                    <div id="fb-${q.id}" class="hidden mt-3 bg-red-50 p-3 rounded border border-red-100">
+                        <p class="text-xs font-bold text-red-800 mb-1">Corrección Manual:</p>
+                        <textarea id="tx-${q.id}" class="w-full text-xs p-2 border rounded mb-2" placeholder="Explica qué está mal para que la IA corrija..."></textarea>
+                        <button onclick="reprocess('${q.id}')" class="bg-red-600 text-white text-xs px-3 py-1 rounded">Reprocesar</button>
+                    </div>
+                `;
+                card.innerHTML = html;
+                container.appendChild(card);
+            });
+        }
+        
+        function renderCardContent(card, q) {
+            if(!card) return;
+            card.querySelector('.status-indicator').innerHTML = getStatusIcon(q.status);
+            card.querySelector('.answer-body').innerHTML = formatMD(q.answer);
         }
 
-        function toggleIncorrectForm(id) { getEl(`feedback-form-${id}`).classList.toggle('hidden'); }
+        function getStatusIcon(status) {
+            if(status === 'done') return '<i class="fas fa-check-circle text-green-500"></i> Terminado';
+            if(status === 'pending') return '<i class="far fa-clock"></i> En cola';
+            if(status === 'error') return '<i class="fas fa-exclamation-triangle text-red-500"></i> Error';
+            return status;
+        }
 
-        async function reprocessQuestion(id) {
-            const feedback = getEl(`feedback-text-${id}`).value;
-            if(!feedback) return;
-            const q = state.questions.find(item => item.id === id);
-            const card = getEl(`card-${id}`);
-            card.querySelector('.answer-content').innerHTML = 'Reprocesando...';
+        // --- REPROCESSING WITH FEEDBACK ---
+        function flagIncorrect(id) { document.getElementById(`fb-${id}`).classList.toggle('hidden'); }
+        
+        async function reprocess(id) {
+            const feedback = document.getElementById(`tx-${id}`).value;
+            const q = state.questions.find(x => x.id === id);
+            if(!q || !feedback) return;
+            
+            document.getElementById(`fb-${id}`).classList.add('hidden');
+            const card = document.getElementById(`card-${id}`);
+            card.querySelector('.answer-body').innerHTML = '<i class="fas fa-sync fa-spin"></i> Corrigiendo...';
+            
             try {
-                const prompt = `PREGUNTA: "${q.text}"\nRESPUESTA ANTERIOR FUE RECHAZADA POR: "${feedback}"\nCORRIGE Y RESPONDE DE NUEVO BASADO EN FUENTES:\n"""${state.sourceText.substring(0,100000)}"""`;
-                const newAnswer = await callGemini(prompt, false);
-                renderSuccessCard(card, q, newAnswer);
-            } catch(e) { alert(e.message); }
+                const prompt = `PREGUNTA: "${q.text}"\nRESPUESTA PREVIA INCORRECTA SEGÚN USUARIO: "${feedback}"\nTAREA: Genera una nueva respuesta corregida usando las fuentes.\nFUENTES: ${state.sourceText.substring(0,50000)}`;
+                const newAns = await callGemini(prompt);
+                
+                q.answer = newAns;
+                q.status = 'done';
+                await saveQuestionState(q);
+                renderCardContent(card, q);
+            } catch(e) {
+                alert(e.message);
+            }
         }
 
-        // --- GEMINI API ---
-        async function askQuestionToGemini(question, context, signal) {
-            const safeContext = context.substring(0, 100000); 
-            const prompt = `Actúa como Auditor. FUENTES: """${safeContext}"""\nPREGUNTA: "${question}"\nResponde ÚNICAMENTE basándote en las fuentes. Cita documento y sección.`;
+        // --- API & UTILS ---
+        async function askGemini(q, ctx, signal) {
+            const prompt = `Actúa como Auditor de Ciberseguridad. 
+            CONTEXTO (Fuentes): """${ctx.substring(0, 100000)}"""
+            PREGUNTA: "${q}"
+            INSTRUCCIÓN: Responde conciso. Cita el nombre del documento fuente. Si no hay info, dilo.`;
             return await callGemini(prompt, false, signal);
         }
 
-        async function callGemini(promptText, jsonMode = false, signal = null) {
-            if (!state.apiKey) throw new Error("Falta API Key");
+        async function callGemini(text, json=false, signal=null) {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${state.apiKey}`;
-            const payload = { contents: [{ parts: [{ text: promptText }] }] };
-            if (jsonMode) payload.generationConfig = { responseMimeType: "application/json" };
+            const body = { contents: [{ parts: [{ text }] }] };
+            if(json) body.generationConfig = { responseMimeType: "application/json" };
             
-            const response = await fetch(url, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal
-            });
-            if (!response.ok) throw new Error((await response.json()).error?.message || "Error API");
-            return (await response.json()).candidates[0].content.parts[0].text;
+            const res = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body), signal });
+            if(!res.ok) throw new Error((await res.json()).error?.message || 'API Error');
+            return (await res.json()).candidates[0].content.parts[0].text;
         }
 
-        // --- EXPORT ---
-        function copyAllResults() { navigator.clipboard.writeText(getEl('resultsContainer').innerText); alert("Copiado"); }
-        function sendEmail() {
-            let text = "";
-            document.querySelectorAll('div[id^="card-"]').forEach(c => {
-                 if(c.querySelector('.answer-content')) text += `Q: ${c.querySelector('p.bg-slate-50').innerText}\nR: ${c.querySelector('.answer-content').innerText}\n\n`;
+        function formatMD(text) {
+            if(!text) return '';
+            return text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+        }
+        
+        // Helpers
+        function getEl(id) { return document.getElementById(id); }
+        function showStep(n) {
+            [1,2,3].forEach(i => {
+                getEl(`step${i}`).classList.add('hidden');
+                const ind = getEl(`step${i}-ind`);
+                if(i===n) { ind.className = "flex flex-col items-center step-active w-1/3 font-bold cursor-pointer"; ind.querySelector('div').classList.add('border-blue-500','text-blue-600'); }
+                else if(i<n) { ind.className = "flex flex-col items-center text-green-600 w-1/3 cursor-pointer"; ind.querySelector('div').classList.replace('border-2','bg-green-100'); ind.querySelector('div').innerHTML='✓'; }
+                else { ind.className = "flex flex-col items-center step-inactive w-1/3 cursor-pointer"; ind.querySelector('div').classList.remove('border-blue-500','text-blue-600'); ind.querySelector('div').innerHTML=i; }
             });
-            window.location.href = `mailto:?subject=Auditoria&body=${encodeURIComponent(text.substring(0,1800))}`;
+            getEl(`step${n}`).classList.remove('hidden');
+        }
+        function enableStep(n) { getEl(`step${n}-ind`).classList.remove('step-inactive'); }
+        
+        function copyAllResults() {
+            const txt = state.questions.map(q => `[${q.id}] ${q.text}\nR: ${q.answer}\n`).join('\n---\n');
+            navigator.clipboard.writeText(txt);
+            alert("Copiado al portapapeles");
+        }
+        function sendEmail() {
+             const txt = state.questions.map(q => `[${q.id}] ${q.text}\nR: ${q.answer}\n`).join('\n\n');
+             window.location.href = `mailto:?subject=Auditoría&body=${encodeURIComponent(txt.substring(0,1800))}`;
         }
     </script>
 </body>
