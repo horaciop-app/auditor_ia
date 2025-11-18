@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auditor de Seguridad AI - Persistente</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PDF.js para leer archivos PDF en el navegador -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .step-active { border-color: #3b82f6; color: #3b82f6; }
+        .step-inactive { border-color: #e5e7eb; color: #9ca3af; }
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 3px solid #3b82f6;
+            width: 20px;
+            height: 20px;
+            -webkit-animation: spin 1s linear infinite; /* Safari */
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Custom scrollbar for file list */
+        .scrollbar-thin::-webkit-scrollbar { width: 6px; }
+        .scrollbar-thin::-webkit-scrollbar-track { bg: #f1f1f1; }
+        .scrollbar-thin::-webkit-scrollbar-thumb { bg: #cbd5e1; border-radius: 3px; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-slate-900 text-white p-4 shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                <i class="fas fa-shield-alt text-blue-400"></i> Auditoría Securitas AI
+            </h1>
+            <div class="text-sm text-slate-400 hidden sm:block">Prototipo v1.3 (Memoria Local)</div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow container mx-auto p-4 md:p-8 max-w-4xl">
+        
+        <!-- API Key Configuration -->
+        <div id="apiKeySection" class="mb-8 bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+            <label class="block text-sm font-medium text-slate-700 mb-2">Paso 0: Configuración</label>
+            <div class="flex gap-2">
+                <input type="password" id="apiKeyInput" placeholder="Ingresa tu Gemini API Key aquí" class="flex-1 p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <p class="text-xs text-slate-500 mt-2">Tu clave se guarda en este navegador para futuras sesiones.</p>
+        </div>
+
+        <!-- Progress Steps -->
+        <div class="flex justify-between mb-8 text-sm font-medium">
+            <div id="step1-ind" class="flex flex-col items-center step-active w-1/3 cursor-pointer" onclick="if(!this.classList.contains('step-inactive')) showStep(1)">
+                <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center mb-1 bg-white transition-all">1</div>
+                <span>Fuentes de Verdad</span>
+            </div>
+            <div id="step2-ind" class="flex flex-col items-center step-inactive w-1/3">
+                <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center mb-1 bg-white transition-all">2</div>
+                <span>Cuestionario</span>
+            </div>
+            <div id="step3-ind" class="flex flex-col items-center step-inactive w-1/3">
+                <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center mb-1 bg-white transition-all">3</div>
+                <span>Resultados</span>
+            </div>
+        </div>
+
+        <!-- STEP 1: Upload Knowledge Base -->
+        <div id="step1" class="step-content bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold text-slate-800">1. Base de Conocimiento (Fuentes)</h2>
+                <button onclick="clearKnowledgeBase()" class="text-xs text-red-500 hover:text-red-700 border border-red-200 px-2 py-1 rounded hover:bg-red-50 transition">
+                    <i class="fas fa-trash-alt"></i> Borrar Memoria
+                </button>
+            </div>
+            
+            <p class="text-slate-600 mb-4 text-sm">
+                Los archivos que subas aquí se guardarán en tu navegador. Puedes cerrar la página y volver más tarde.
+                <br><strong>Actualmente tienes: <span id="kbStatus" class="font-bold text-blue-600">0 archivos</span></strong>
+            </p>
+            
+            <div class="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:bg-slate-50 transition-colors cursor-pointer relative group">
+                <input type="file" id="sourcePdf" accept="application/pdf" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="handleSourceUpload()">
+                <div class="flex flex-col items-center pointer-events-none">
+                    <i class="fas fa-folder-plus text-4xl text-slate-400 mb-3 group-hover:text-blue-500 transition-colors"></i>
+                    <span class="text-slate-600 font-medium">Agregar más PDFs a la base de datos</span>
+                    <span class="text-slate-400 text-xs mt-1">Soporta múltiples archivos</span>
+                </div>
+            </div>
+            
+            <!-- File List Display -->
+            <div id="filesListContainer" class="hidden mt-4 bg-slate-50 rounded-lg border border-slate-200 p-4">
+                <h4 class="text-xs font-bold text-slate-500 uppercase mb-2 flex justify-between">
+                    Archivos en Memoria:
+                    <span class="text-slate-400 font-normal text-[10px]" id="storageSize">0 MB usados</span>
+                </h4>
+                <ul id="uploadedFilesList" class="space-y-1 text-sm text-slate-700 max-h-40 overflow-y-auto scrollbar-thin">
+                    <!-- Dynamic List -->
+                </ul>
+            </div>
+
+            <div id="sourceProcessing" class="hidden mt-4 flex items-center justify-center text-blue-600 gap-2">
+                <div class="loader"></div> <span id="procText">Procesando archivos...</span>
+            </div>
+
+            <div class="mt-6 flex justify-end">
+                <button id="btnToStep2" onclick="goToStep2()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium opacity-50 cursor-not-allowed shadow-md transition-all" disabled>
+                    Ir al Cuestionario <i class="fas fa-arrow-right ml-2"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- STEP 2: Upload Questions & Extract -->
+        <div id="step2" class="hidden step-content bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h2 class="text-lg font-semibold mb-4 text-slate-800">2. Cargar Cuestionario</h2>
+            <p class="text-slate-600 mb-4 text-sm">Sube el PDF que contiene las preguntas a responder.</p>
+            
+            <div class="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:bg-slate-50 transition-colors cursor-pointer relative">
+                <input type="file" id="questionPdf" accept="application/pdf" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleQuestionUpload()">
+                <div class="flex flex-col items-center">
+                    <i class="fas fa-file-contract text-4xl text-slate-400 mb-3"></i>
+                    <span class="text-slate-600 font-medium">Sube el PDF del Cuestionario</span>
+                    <span id="questionFileName" class="text-blue-600 text-sm mt-2 font-semibold"></span>
+                </div>
+            </div>
+
+            <!-- Extracted Questions Preview -->
+            <div id="questionsListArea" class="hidden mt-6">
+                <h3 class="text-md font-bold text-slate-700 mb-2 flex justify-between items-center">
+                    Preguntas Detectadas
+                    <span id="qCount" class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">0</span>
+                </h3>
+                <div id="questionsList" class="bg-slate-50 p-4 rounded border border-slate-200 max-h-60 overflow-y-auto space-y-2 text-sm scrollbar-thin">
+                    <!-- Questions will be injected here -->
+                </div>
+            </div>
+
+            <div id="extractingLoader" class="hidden mt-4 flex items-center justify-center text-blue-600 gap-2">
+                <div class="loader"></div> Analizando PDF y extrayendo preguntas...
+            </div>
+
+            <div class="mt-6 flex justify-between">
+                <button onclick="showStep(1)" class="text-slate-500 hover:text-slate-700 font-medium px-4 py-2">Atrás</button>
+                <button id="btnAnalyze" onclick="extractQuestions()" class="bg-slate-800 hover:bg-slate-900 text-white px-6 py-2 rounded-lg font-medium hidden shadow transition-all">
+                    Analizar y Listar Preguntas
+                </button>
+                <button id="btnToStep3" onclick="startAnswering()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium hidden shadow-lg shadow-green-200 transform hover:-translate-y-1 transition-all">
+                    Generar Informe <i class="fas fa-magic ml-1"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- STEP 3: Results -->
+        <div id="step3" class="hidden step-content bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h2 class="text-lg font-semibold mb-4 text-slate-800 flex items-center gap-2">
+                3. Informe de Auditoría
+                <span id="progressBadge" class="text-xs font-normal bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Pendiente</span>
+            </h2>
+            
+            <!-- Toolbar -->
+            <div class="flex gap-2 mb-4 flex-wrap">
+                 <button onclick="copyAllResults()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1 rounded border border-slate-300 mb-2 sm:mb-0 transition">
+                    <i class="fas fa-copy"></i> Copiar
+                </button>
+                <button onclick="window.print()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1 rounded border border-slate-300 mb-2 sm:mb-0 transition">
+                    <i class="fas fa-print"></i> Imprimir/PDF
+                </button>
+                <button onclick="sendEmail()" class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1 rounded border border-blue-200 font-semibold mb-2 sm:mb-0 transition">
+                    <i class="fas fa-envelope"></i> Enviar Email
+                </button>
+            </div>
+
+            <div id="resultsContainer" class="space-y-6">
+                <!-- Result Cards will appear here -->
+            </div>
+
+             <div class="mt-6 flex justify-start">
+                <button onclick="showStep(2)" class="text-slate-500 hover:text-slate-700 font-medium px-4 py-2">Atrás</button>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="bg-slate-50 p-4 text-center text-slate-400 text-xs">
+        <p>Los datos se procesan localmente. No se suben PDFs a ningún servidor externo salvo el texto extraído a la API de Gemini.</p>
+    </footer>
+
+    <script>
+        // --- CONSTANTS & STORAGE KEYS ---
+        const STORAGE_KEY_TEXT = 'ai_auditor_text_v1';
+        const STORAGE_KEY_FILES = 'ai_auditor_files_v1';
+        const STORAGE_KEY_API = 'ai_auditor_apikey_v1';
+
+        // --- STATE ---
+        let state = {
+            apiKey: '',
+            sourceText: '',
+            fileList: [], // Array of filenames
+            questions: [],
+            questionText: ''
+        };
+
+        // --- INITIALIZATION ---
+        window.onload = function() {
+            loadFromStorage();
+        };
+
+        function loadFromStorage() {
+            // 1. Load API Key
+            const savedKey = localStorage.getItem(STORAGE_KEY_API);
+            if(savedKey) {
+                state.apiKey = savedKey;
+                getEl('apiKeyInput').value = savedKey;
+            }
+
+            // 2. Load Knowledge Base
+            const savedText = localStorage.getItem(STORAGE_KEY_TEXT);
+            const savedFiles = localStorage.getItem(STORAGE_KEY_FILES);
+
+            if (savedText && savedFiles) {
+                state.sourceText = savedText;
+                state.fileList = JSON.parse(savedFiles);
+                updateFilesListUI();
+                
+                // Enable Next Button if we have data
+                if(state.fileList.length > 0) {
+                    enableStep2();
+                }
+            }
+        }
+
+        function saveToStorage() {
+            try {
+                localStorage.setItem(STORAGE_KEY_TEXT, state.sourceText);
+                localStorage.setItem(STORAGE_KEY_FILES, JSON.stringify(state.fileList));
+                // Also save API Key whenever it might have changed
+                if(getEl('apiKeyInput').value) {
+                    localStorage.setItem(STORAGE_KEY_API, getEl('apiKeyInput').value);
+                }
+                updateFilesListUI();
+            } catch (e) {
+                if (e.name === 'QuotaExceededError') {
+                    alert("¡Memoria llena! Has subido demasiados documentos para la memoria local del navegador. Intenta 'Borrar Memoria' y subir solo lo esencial.");
+                } else {
+                    console.error("Error saving to storage", e);
+                }
+            }
+        }
+
+        function clearKnowledgeBase() {
+            if(confirm("¿Estás seguro de que quieres borrar todas las fuentes cargadas? Esto no se puede deshacer.")) {
+                state.sourceText = '';
+                state.fileList = [];
+                localStorage.removeItem(STORAGE_KEY_TEXT);
+                localStorage.removeItem(STORAGE_KEY_FILES);
+                updateFilesListUI();
+                disableStep2();
+                alert("Memoria borrada correctamente.");
+            }
+        }
+
+        // --- UI HELPERS ---
+        function getEl(id) { return document.getElementById(id); }
+        
+        function enableStep2() {
+            const btn = getEl('btnToStep2');
+            btn.disabled = false;
+            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+
+        function disableStep2() {
+            const btn = getEl('btnToStep2');
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+
+        function updateFilesListUI() {
+            const listContainer = getEl('filesListContainer');
+            const listEl = getEl('uploadedFilesList');
+            const statusEl = getEl('kbStatus');
+            const sizeEl = getEl('storageSize');
+
+            statusEl.textContent = state.fileList.length + (state.fileList.length === 1 ? " archivo" : " archivos");
+
+            // Calculate rough size in MB
+            const sizeInMB = (state.sourceText.length / 1024 / 1024).toFixed(2);
+            sizeEl.textContent = `~${sizeInMB} MB texto crudo`;
+
+            if (state.fileList.length > 0) {
+                listContainer.classList.remove('hidden');
+                listEl.innerHTML = '';
+                state.fileList.forEach(fileName => {
+                    const li = document.createElement('li');
+                    li.className = "flex items-center text-slate-600 bg-white border border-slate-100 px-2 py-1 rounded";
+                    li.innerHTML = `<i class="fas fa-check-circle text-green-500 mr-2 text-xs"></i> ${fileName}`;
+                    listEl.appendChild(li);
+                });
+            } else {
+                listContainer.classList.add('hidden');
+            }
+        }
+
+        function showStep(stepNumber) {
+            ['step1', 'step2', 'step3'].forEach(id => getEl(id).classList.add('hidden'));
+            getEl('step' + stepNumber).classList.remove('hidden');
+
+            // Update indicators
+            for(let i=1; i<=3; i++) {
+                const el = getEl(`step${i}-ind`);
+                if (i === stepNumber) {
+                    el.className = 'flex flex-col items-center step-active w-1/3 font-bold cursor-pointer';
+                    el.querySelector('div').classList.add('border-blue-500', 'text-blue-600', 'bg-white');
+                    el.querySelector('div').classList.remove('bg-green-50', 'text-green-600', 'border-green-500');
+                    el.querySelector('div').innerHTML = i;
+                } else if (i < stepNumber) {
+                     el.className = 'flex flex-col items-center text-green-600 w-1/3 cursor-pointer';
+                     el.querySelector('div').classList.add('border-green-500', 'bg-green-50', 'text-green-600');
+                     el.querySelector('div').classList.remove('border-blue-500', 'text-blue-600');
+                     el.querySelector('div').innerHTML = '<i class="fas fa-check"></i>';
+                } else {
+                    el.className = 'flex flex-col items-center step-inactive w-1/3';
+                    el.querySelector('div').classList.remove('border-blue-500', 'text-blue-600', 'border-green-500', 'bg-green-50', 'text-green-600');
+                    el.querySelector('div').innerHTML = i;
+                }
+            }
+        }
+
+        // --- PDF EXTRACTION (PDF.js) ---
+        async function extractTextFromPDF(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            let fullText = '';
+
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items.map(item => item.str).join(' ');
+                fullText += `\n[Página ${i}]\n` + pageText;
+            }
+            return fullText;
+        }
+
+        // --- STEP 1 LOGIC: Source (APPEND MODE) ---
+        async function handleSourceUpload() {
+            const fileInput = getEl('sourcePdf');
+            const files = Array.from(fileInput.files); 
+            
+            if (files.length === 0) return;
+
+            getEl('sourceProcessing').classList.remove('hidden');
+            disableStep2();
+            
+            let newText = "";
+            let newFilesCount = 0;
+
+            try {
+                for (const file of files) {
+                    // Check if file already exists to avoid duplicates (optional, simplistic check)
+                    if(state.fileList.includes(file.name)){
+                        console.log(`Skipping duplicate: ${file.name}`);
+                        continue;
+                    }
+
+                    getEl('procText').textContent = `Leyendo ${file.name}...`;
+                    const text = await extractTextFromPDF(file);
+                    
+                    newText += `\n\n========================================\nDOCUMENTO: ${file.name}\n========================================\n${text}\n\nFIN DE DOCUMENTO: ${file.name}\n`;
+                    
+                    state.fileList.push(file.name);
+                    newFilesCount++;
+                }
+
+                if (newFilesCount > 0) {
+                    // Append to existing text instead of replacing
+                    state.sourceText += newText;
+                    saveToStorage(); // Save immediately
+                    enableStep2();
+                } else {
+                    alert("Los archivos seleccionados ya estaban cargados o no contienen texto.");
+                     if(state.fileList.length > 0) enableStep2();
+                }
+
+                getEl('sourceProcessing').classList.add('hidden');
+                
+            } catch (e) {
+                alert('Error leyendo PDFs: ' + e.message);
+                getEl('sourceProcessing').classList.add('hidden');
+            }
+            
+            // Reset input so same file can be selected again if user really wants to (after clearing)
+            fileInput.value = ''; 
+        }
+
+        function goToStep2() {
+            state.apiKey = getEl('apiKeyInput').value.trim();
+            if (!state.apiKey) {
+                alert("Por favor ingresa tu API Key primero.");
+                getEl('apiKeyInput').focus();
+                return;
+            }
+            // Save API Key on transition
+            localStorage.setItem(STORAGE_KEY_API, state.apiKey);
+            showStep(2);
+        }
+
+        // --- STEP 2 LOGIC: Questions ---
+        async function handleQuestionUpload() {
+            const fileInput = getEl('questionPdf');
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            getEl('questionFileName').textContent = file.name;
+            getEl('btnAnalyze').classList.remove('hidden');
+        }
+
+        async function extractQuestions() {
+            const file = getEl('questionPdf').files[0];
+            if (!file) return;
+
+            getEl('extractingLoader').classList.remove('hidden');
+            getEl('btnAnalyze').classList.add('hidden');
+            getEl('questionsListArea').classList.add('hidden');
+
+            try {
+                state.questionText = await extractTextFromPDF(file);
+
+                // Helper to truncate for parsing
+                const truncatedText = state.questionText.substring(0, 40000);
+
+                const prompt = `
+                    Analiza el siguiente texto que proviene de un PDF (Cuestionario de Auditoría). 
+                    Tu tarea es EXTRAER todas las preguntas, controles o ítems de auditoría que encuentres.
+                    
+                    Reglas:
+                    1. Si tienen número o ID original (ej: "1.1", "Q1", "A", "Control 5"), consérvalo.
+                    2. Si no tienen ID, asigna un número correlativo simple (1, 2, 3...).
+                    3. Devuelve SOLO un objeto JSON válido con este formato exacto: 
+                    [{"id": "1.1", "text": "¿Existe política de contraseñas?"}, ...]
+                    
+                    TEXTO DEL CUESTIONARIO:
+                    ${truncatedText} 
+                `; 
+
+                const response = await callGemini(prompt, true);
+                
+                let questions = [];
+                try {
+                    const cleanJson = response.replace(/```json/g, '').replace(/```/g, '').trim();
+                    questions = JSON.parse(cleanJson);
+                } catch(e) {
+                    console.error("Error parsing JSON", response);
+                    alert("La IA no devolvió un formato válido. Intentando modo texto simple.");
+                    questions = [{id: "Error", text: "No se pudieron parsear las preguntas automáticamente. Revisa la consola."}];
+                }
+
+                state.questions = questions;
+                renderQuestionsList();
+
+                getEl('extractingLoader').classList.add('hidden');
+                getEl('questionsListArea').classList.remove('hidden');
+                getEl('btnToStep3').classList.remove('hidden');
+
+            } catch (e) {
+                alert("Error procesando cuestionario: " + e.message);
+                getEl('extractingLoader').classList.add('hidden');
+                getEl('btnAnalyze').classList.remove('hidden');
+            }
+        }
+
+        function renderQuestionsList() {
+            const listEl = getEl('questionsList');
+            listEl.innerHTML = '';
+            getEl('qCount').textContent = state.questions.length;
+
+            state.questions.forEach(q => {
+                const div = document.createElement('div');
+                div.className = "p-2 bg-white border border-slate-100 rounded flex gap-3 text-xs sm:text-sm";
+                div.innerHTML = `
+                    <span class="font-bold text-blue-600 whitespace-nowrap min-w-[30px]">${q.id}</span>
+                    <span class="text-slate-700">${q.text}</span>
+                `;
+                listEl.appendChild(div);
+            });
+        }
+
+        // --- STEP 3 LOGIC: Answering ---
+        async function startAnswering() {
+            showStep(3);
+            const container = getEl('resultsContainer');
+            container.innerHTML = ''; 
+
+            getEl('progressBadge').textContent = "Iniciando...";
+            getEl('progressBadge').className = "text-xs font-normal bg-blue-100 text-blue-800 px-2 py-1 rounded";
+
+            for (let i = 0; i < state.questions.length; i++) {
+                const q = state.questions[i];
+                
+                const cardId = `card-${i}`;
+                const card = document.createElement('div');
+                card.id = cardId;
+                card.className = "bg-white p-6 rounded-lg shadow border-l-4 border-slate-300 animate-pulse";
+                card.innerHTML = `
+                    <div class="flex justify-between mb-2">
+                        <span class="font-bold text-lg text-slate-800">${q.id}</span>
+                        <span class="text-xs text-slate-400"><i class="fas fa-circle-notch fa-spin"></i> Analizando...</span>
+                    </div>
+                    <p class="font-medium text-slate-700 mb-4">${q.text}</p>
+                    <div class="h-20 bg-slate-100 rounded"></div>
+                `;
+                container.appendChild(card);
+
+                // Auto-scroll to bottom if needed
+                if(i > 0) card.scrollIntoView({behavior: "smooth", block: "end"});
+
+                try {
+                    const answer = await askQuestionToGemini(q.text, state.sourceText);
+                    
+                    const finalCard = getEl(cardId);
+                    finalCard.className = "bg-white p-6 rounded-lg shadow border-l-4 border-blue-500 transition-all";
+                    finalCard.classList.remove('animate-pulse');
+                    
+                    const formattedAnswer = answer
+                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                        .replace(/\n/g, '<br>');
+
+                    finalCard.innerHTML = `
+                        <div class="flex justify-between mb-2 border-b border-slate-100 pb-2">
+                            <span class="font-bold text-lg text-blue-900">Pregunta ${q.id}</span>
+                            <span class="text-xs text-green-600 font-bold"><i class="fas fa-check"></i> Completado</span>
+                        </div>
+                        <p class="font-medium text-slate-800 mb-4 bg-slate-50 p-2 rounded border border-slate-100">${q.text}</p>
+                        <div class="text-slate-600 text-sm leading-relaxed answer-content">
+                            ${formattedAnswer}
+                        </div>
+                    `;
+
+                } catch (e) {
+                    const finalCard = getEl(cardId);
+                    finalCard.className = "bg-white p-6 rounded-lg shadow border-l-4 border-red-500";
+                    finalCard.innerHTML += `<p class="text-red-500 text-sm">Error al generar respuesta: ${e.message}</p>`;
+                }
+
+                getEl('progressBadge').textContent = `Completado ${i+1} de ${state.questions.length}`;
+            }
+
+            getEl('progressBadge').textContent = "¡Auditoría Finalizada!";
+            getEl('progressBadge').className = "text-xs font-normal bg-green-100 text-green-800 px-2 py-1 rounded font-bold";
+        }
+
+        async function askQuestionToGemini(question, context) {
+            // Limit context significantly to fit mostly in browser memory logic 
+            // and standard token limits. 
+            const safeContext = context.substring(0, 120000); // Approx 30k tokens
+
+            const prompt = `
+                Actúa como un Auditor de Ciberseguridad Senior (ISO 27001 / NIST).
+                
+                FUENTES DE INFORMACIÓN (Base de Conocimiento):
+                """
+                ${safeContext}
+                ... (fin de contexto)
+                """
+
+                PREGUNTA A RESPONDER:
+                "${question}"
+
+                INSTRUCCIONES:
+                1. Tu objetivo es verificar el cumplimiento o la respuesta basándote EXCLUSIVAMENTE en las fuentes proporcionadas.
+                2. Si encuentras la respuesta:
+                   - Empieza indicando si se cumple o no (si aplica).
+                   - Explica el porqué.
+                   - CITA el nombre del documento y la sección/página específica donde lo encontraste.
+                3. Si la respuesta NO está en las fuentes:
+                   - Indica claramente: "No se encuentra evidencia en la documentación suministrada."
+                4. Mantén un tono profesional y objetivo.
+            `;
+
+            return await callGemini(prompt, false);
+        }
+
+        // --- GEMINI API UTILS ---
+        async function callGemini(promptText, jsonMode = false) {
+            if (!state.apiKey) throw new Error("Falta API Key");
+
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${state.apiKey}`;
+            
+            const payload = {
+                contents: [{
+                    parts: [{ text: promptText }]
+                }]
+            };
+
+            if (jsonMode) {
+                payload.generationConfig = {
+                    responseMimeType: "application/json"
+                };
+            }
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error?.message || "Error en API Gemini");
+            }
+
+            const data = await response.json();
+            return data.candidates[0].content.parts[0].text;
+        }
+
+        function copyAllResults() {
+            const container = getEl('resultsContainer');
+            const text = container.innerText;
+            navigator.clipboard.writeText(text).then(() => alert("Informe copiado al portapapeles"));
+        }
+
+        // --- EMAIL FEATURE ---
+        function sendEmail() {
+            const container = getEl('resultsContainer');
+            let text = "INFORME DE AUDITORÍA DE SEGURIDAD\nGenerado por AI Auditor\n\n";
+            
+            const cards = container.querySelectorAll('div[id^="card-"]');
+            if(cards.length === 0) {
+                alert("No hay resultados para enviar aún.");
+                return;
+            }
+
+            cards.forEach(card => {
+                const idElem = card.querySelector('span.text-blue-900');
+                const qElem = card.querySelector('p.bg-slate-50');
+                const aElem = card.querySelector('div.answer-content');
+                
+                if(idElem && qElem && aElem) {
+                    const qID = idElem.textContent.trim();
+                    const question = qElem.textContent.trim();
+                    const answer = aElem.innerText.trim();
+                    
+                    text += `[${qID}] ${question}\n`;
+                    text += `R: ${answer}\n`;
+                    text += "---------------------------------------------------\n\n";
+                }
+            });
+
+            const subject = encodeURIComponent("Resultados de Auditoría de Seguridad");
+            const encodedBody = encodeURIComponent(text);
+            
+            if (encodedBody.length > 1800) {
+                navigator.clipboard.writeText(text).then(() => {
+                    const confirmMsg = "Informe extenso copiado al portapapeles. Se abrirá tu correo, por favor pega (Ctrl+V) el contenido en el cuerpo.";
+                    if(confirm(confirmMsg)) {
+                        window.location.href = `mailto:?subject=${subject}`;
+                    }
+                });
+            } else {
+                window.location.href = `mailto:?subject=${subject}&body=${encodedBody}`;
+            }
+        }
+
+    </script>
+</body>
+</html>
