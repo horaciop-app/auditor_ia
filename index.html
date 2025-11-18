@@ -3,13 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Framework de Auditoría AI v3.0</title>
+    <title>Framework de Auditoría AI v3.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- PDF.js -->
+    
+    <!-- LIBRERÍAS DE PROCESAMIENTO DE DOCUMENTOS -->
+    <!-- PDF.js para PDFs -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    </script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+    <!-- Mammoth para Word (.docx) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <!-- SheetJS para Excel (.xlsx) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
@@ -42,7 +47,7 @@
                 <span class="text-xs bg-blue-900 px-2 py-1 rounded text-blue-200 border border-blue-800">
                     <i class="fas fa-save"></i> Auto-Guardado Activo
                 </span>
-                <div class="text-sm text-slate-400 hidden sm:block">v3.0 (Sesiones Persistentes)</div>
+                <div class="text-sm text-slate-400 hidden sm:block">v3.1 (Multi-Formato)</div>
             </div>
         </div>
     </header>
@@ -122,14 +127,23 @@
                 </button>
             </div>
 
-            <div class="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:bg-slate-50 transition-colors cursor-pointer relative">
-                <input type="file" id="questionPdf" accept="application/pdf" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleQuestionUpload()">
-                <div class="flex flex-col items-center">
-                    <i class="fas fa-file-contract text-4xl text-slate-400 mb-3"></i>
-                    <span class="text-slate-600 font-medium">Sube el PDF de Preguntas</span>
-                    <span id="questionFileName" class="text-blue-600 text-sm mt-2 font-semibold"></span>
+            <p class="text-slate-600 mb-4 text-sm">Sube los archivos con las preguntas. <br><strong>Soporta:</strong> PDF, Excel (.xlsx) y Word (.docx). Escaneará todas las pestañas de Excel.</p>
+
+            <div class="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:bg-slate-50 transition-colors cursor-pointer relative group">
+                <!-- Changed to accept multiple file types and multiple files -->
+                <input type="file" id="questionFiles" multiple accept=".pdf,.docx,.xlsx,.xls" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="handleQuestionUpload()">
+                <div class="flex flex-col items-center pointer-events-none">
+                    <div class="flex gap-4 mb-3 text-slate-400">
+                        <i class="fas fa-file-pdf text-3xl group-hover:text-red-500 transition-colors"></i>
+                        <i class="fas fa-file-excel text-3xl group-hover:text-green-600 transition-colors"></i>
+                        <i class="fas fa-file-word text-3xl group-hover:text-blue-600 transition-colors"></i>
+                    </div>
+                    <span class="text-slate-600 font-medium">Arrastra tus Cuestionarios aquí</span>
+                    <span class="text-slate-400 text-xs mt-1">(PDF, Excel, Word - Multiarchivo)</span>
                 </div>
             </div>
+
+            <div id="selectedQuestionsFiles" class="mt-4 text-sm text-slate-600 font-mono hidden"></div>
 
             <div id="questionsListArea" class="hidden mt-6">
                 <h3 class="text-md font-bold text-slate-700 mb-2 flex justify-between items-center">
@@ -140,13 +154,13 @@
             </div>
 
             <div id="extractingLoader" class="hidden mt-4 flex items-center justify-center text-blue-600 gap-2">
-                <div class="loader"></div> Analizando estructura...
+                <div class="loader"></div> <span id="extractStatus">Analizando estructura...</span>
             </div>
 
             <div class="mt-6 flex justify-between">
                 <button onclick="showStep(1)" class="text-slate-500 hover:text-slate-700 font-medium px-4 py-2">Atrás</button>
                 <button id="btnAnalyze" onclick="extractQuestions()" class="bg-slate-800 hover:bg-slate-900 text-white px-6 py-2 rounded-lg font-medium hidden shadow transition-all">
-                    Analizar PDF
+                    Analizar Archivos
                 </button>
                 <button id="btnToStep3" onclick="startQueueProcessing()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium hidden shadow-lg shadow-green-200 transform hover:-translate-y-1 transition-all">
                     Comenzar/Reanudar <i class="fas fa-play ml-1"></i>
@@ -198,10 +212,10 @@
 
     <script>
         // --- DATABASE V2 (High Capacity + Sessions) ---
-        const DB_NAME = 'AuditorDB_v3'; // Changed name to force fresh V3 DB
+        const DB_NAME = 'AuditorDB_v3'; 
         const DB_VERSION = 1;
         const STORE_DOCS = 'documents';
-        const STORE_QUESTIONS = 'questions'; // Persistent Session Store
+        const STORE_QUESTIONS = 'questions'; 
 
         const dbPromise = new Promise((resolve, reject) => {
             const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -223,8 +237,8 @@
                 const request = callback(store);
                 tx.oncomplete = () => resolve(request?.result);
                 tx.onerror = () => reject(tx.error);
-                if (request && request.onsuccess === null) { // For gets/getAll
-                    request.onsuccess = () => {}; // managed by transaction result usually, but for read ops needs care
+                if (request && request.onsuccess === null) { 
+                    request.onsuccess = () => {}; 
                 }
             });
         }
@@ -237,7 +251,6 @@
             });
         }
         
-        // Session Management (The "Chat" saver)
         async function saveQuestionState(qObj) { await dbOp('readwrite', STORE_QUESTIONS, s => s.put(qObj)); }
         async function loadQuestionsState() {
              const db = await dbPromise;
@@ -256,7 +269,7 @@
         let state = {
             apiKey: localStorage.getItem('ai_auditor_key') || '',
             sourceText: '',
-            questions: [], // {id, text, status, answer, errorMsg, attempts, feedback}
+            questions: [], 
             abortCtrl: null,
             isProcessing: false
         };
@@ -272,27 +285,19 @@
                 updateFilesUI(docs);
                 enableStep(2);
                 
-                // --- CORRECCIÓN: HABILITAR BOTÓN SIGUIENTE ---
                 const btn = getEl('btnToStep2');
                 btn.disabled = false;
                 btn.classList.remove('opacity-50', 'cursor-not-allowed');
-                // ---------------------------------------------
             }
 
             // 2. Load Session (Chat History)
             const savedQuestions = await loadQuestionsState();
             if(savedQuestions.length > 0) {
-                // Restore session
-                state.questions = savedQuestions.sort((a,b) => {
-                    // Try sort numerically if IDs are numbers, else alphabetical
-                    return a.id.localeCompare(b.id, undefined, {numeric: true});
-                });
-                
+                state.questions = savedQuestions.sort((a,b) => a.id.localeCompare(b.id, undefined, {numeric: true}));
                 updateQuestionsUI();
-                renderResultsUI(); // Restore the chat cards
+                renderResultsUI();
                 enableStep(3);
                 
-                // Check if audit was incomplete
                 const pending = state.questions.filter(q => q.status === 'pending');
                 if(pending.length > 0) {
                     getEl('btnResume').classList.remove('hidden');
@@ -303,31 +308,53 @@
             }
         };
 
-        // --- STEP 1: SOURCES ---
+        // --- EXTRACTION HELPERS (MULTI-FORMAT) ---
+        
         async function extractTextFromPDF(file) {
             const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
             let txt = '';
             for(let i=1; i<=pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
                 const content = await page.getTextContent();
-                txt += ` [Pág ${i}] ` + content.items.map(i=>i.str).join(' ');
+                txt += `\n[PDF Pág ${i}] ` + content.items.map(i=>i.str).join(' ');
             }
             return txt;
         }
 
+        async function extractTextFromDOCX(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+            return `\n[WORD DOC] ` + result.value;
+        }
+
+        async function extractTextFromXLSX(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const workbook = XLSX.read(arrayBuffer);
+            let txt = `\n[EXCEL FILE: ${file.name}]\n`;
+            
+            workbook.SheetNames.forEach(sheetName => {
+                const sheet = workbook.Sheets[sheetName];
+                // Convert sheet to CSV text to preserve some structure
+                const csv = XLSX.utils.sheet_to_csv(sheet);
+                if (csv.trim().length > 0) {
+                    txt += `\n--- Pestaña/Hoja: ${sheetName} ---\n${csv}\n`;
+                }
+            });
+            return txt;
+        }
+
+        // --- STEP 1: SOURCES ---
         async function handleSourceUpload() {
             const files = getEl('sourcePdf').files;
             if(!files.length) return;
-            
             getEl('sourceProcessing').classList.remove('hidden');
             
             for(const file of files) {
                 getEl('procText').textContent = `Indexando ${file.name}...`;
-                const text = await extractTextFromPDF(file);
+                const text = await extractTextFromPDF(file); // Assuming sources are mostly PDF for now, per original scope
                 await saveDoc(file.name, text);
             }
-            
-            window.location.reload(); // Simple refresh to load new state properly
+            window.location.reload(); 
         }
 
         function updateFilesUI(docs) {
@@ -350,19 +377,57 @@
         }
 
         async function handleQuestionUpload() {
-            getEl('questionFileName').textContent = getEl('questionPdf').files[0]?.name;
-            getEl('btnAnalyze').classList.remove('hidden');
+            const files = getEl('questionFiles').files;
+            if (files.length > 0) {
+                const names = Array.from(files).map(f => f.name).join(', ');
+                const displayEl = getEl('selectedQuestionsFiles');
+                displayEl.textContent = "Archivos seleccionados: " + names;
+                displayEl.classList.remove('hidden');
+                getEl('btnAnalyze').classList.remove('hidden');
+            }
         }
 
         async function extractQuestions() {
-            const file = getEl('questionPdf').files[0];
-            if(!file) return;
+            const files = getEl('questionFiles').files;
+            if(!files.length) return;
             
             getEl('extractingLoader').classList.remove('hidden');
+            getEl('btnAnalyze').classList.add('hidden');
             
             try {
-                const text = await extractTextFromPDF(file);
-                const prompt = `Extrae preguntas de auditoría. JSON Array: [{"id":"1","text":"Pregunta"}]. Texto: ${text.substring(0,30000)}`;
+                let fullText = "";
+                
+                for (const file of files) {
+                    getEl('extractStatus').textContent = `Leyendo ${file.name}...`;
+                    const ext = file.name.split('.').pop().toLowerCase();
+                    
+                    if (ext === 'pdf') {
+                        fullText += await extractTextFromPDF(file);
+                    } else if (ext === 'docx') {
+                        fullText += await extractTextFromDOCX(file);
+                    } else if (ext === 'xlsx' || ext === 'xls') {
+                        fullText += await extractTextFromXLSX(file);
+                    }
+                    fullText += "\n\n--------------------------------\n\n";
+                }
+
+                getEl('extractStatus').textContent = "Analizando contenido con IA...";
+
+                const prompt = `
+                    Actúa como un experto auditor.
+                    Analiza el siguiente texto crudo que puede venir de PDFs, Excels (varias pestañas) o Word.
+                    Tu tarea es IDENTIFICAR y EXTRAER una lista limpia de preguntas, controles o requerimientos de seguridad que requieren auditoría.
+                    
+                    Ignora encabezados de tablas, números de página irrelevantes o texto de relleno.
+                    Si es un Excel, busca en todas las pestañas (el texto incluye marcadores de pestañas).
+                    
+                    Devuelve SOLO un array JSON válido con este formato:
+                    [{"id": "ID_ORIGINAL_O_AUTO", "text": "Texto completo de la pregunta o control"}]
+                    
+                    TEXTO A ANALIZAR:
+                    ${fullText.substring(0, 60000)}
+                `; // Limit context size slightly to ensure prompt fits
+
                 const jsonStr = await callGemini(prompt, true);
                 const cleanJson = jsonStr.replace(/```json|```/g, '').trim();
                 
@@ -370,7 +435,6 @@
                     ...q, status: 'pending', attempts: 0, answer: null
                 }));
 
-                // Clear old session and save new
                 await dbOp('readwrite', STORE_QUESTIONS, s => s.clear());
                 for(const q of newQuestions) await saveQuestionState(q);
                 
@@ -382,8 +446,10 @@
                 getEl('questionsListArea').classList.remove('hidden');
 
             } catch(e) {
-                alert("Error: " + e.message);
+                alert("Error en análisis: " + e.message);
+                console.error(e);
                 getEl('extractingLoader').classList.add('hidden');
+                getEl('btnAnalyze').classList.remove('hidden');
             }
         }
 
@@ -396,7 +462,7 @@
             });
         }
 
-        // --- STEP 3: EXECUTION LOOP (The Core) ---
+        // --- STEP 3: EXECUTION LOOP ---
         async function startQueueProcessing() {
             showStep(3);
             state.isProcessing = true;
@@ -405,16 +471,13 @@
             getEl('btnStop').classList.remove('hidden');
             getEl('btnResume').classList.add('hidden');
             
-            // Ensure UI is populated (important for resume)
             renderResultsUI(); 
 
-            // Find pending questions
             const pending = state.questions.filter(q => q.status === 'pending' || q.status === 'retry');
             
             for (const q of pending) {
                 if(!state.isProcessing) break;
                 
-                // UI Update: Working on specific card
                 const card = document.getElementById(`card-${q.id}`);
                 if(card) {
                     card.scrollIntoView({behavior: 'smooth', block: 'center'});
@@ -422,34 +485,27 @@
                     card.classList.add('border-blue-400', 'shadow-md');
                 }
                 
-                getEl('progressStats').textContent = `Procesando ID ${q.id}... (${pending.indexOf(q)}/${pending.length} pendientes)`;
+                getEl('progressStats').textContent = `Procesando ID ${q.id}... (${pending.indexOf(q) + 1}/${pending.length})`;
 
                 try {
                     const answer = await askGemini(q.text, state.sourceText, state.abortCtrl.signal);
-                    
-                    // Update State & DB
                     q.status = 'done';
                     q.answer = answer;
-                    await saveQuestionState(q); // PERMANENT SAVE
-                    
-                    // Update UI
+                    await saveQuestionState(q); 
                     renderCardContent(card, q);
-
                 } catch(e) {
                     if(e.name === 'AbortError') break;
-                    
                     q.attempts++;
                     if(q.attempts < 3) {
                         q.status = 'retry';
-                        card.querySelector('.status-indicator').textContent = `Reintentando (${q.attempts})...`;
+                        if(card) card.querySelector('.status-indicator').textContent = `Reintentando (${q.attempts})...`;
                     } else {
                         q.status = 'error';
                         q.answer = "Error: " + e.message;
-                        card.classList.add('border-red-500');
+                        if(card) card.classList.add('border-red-500');
                     }
-                    await saveQuestionState(q); // Save error state
+                    await saveQuestionState(q); 
                 }
-                
                 if(card) card.classList.remove('border-blue-400', 'shadow-md');
             }
             
@@ -457,7 +513,6 @@
             getEl('btnStop').classList.add('hidden');
             getEl('progressStats').textContent = "Proceso detenido o finalizado.";
             
-            // If fully done
             if(!state.questions.some(q => q.status === 'pending')) {
                  getEl('progressStats').innerHTML = '<span class="text-green-600 font-bold"><i class="fas fa-check"></i> Auditoría Completa</span>';
             } else {
@@ -473,24 +528,16 @@
         // --- UI RENDERING ---
         function renderResultsUI() {
             const container = getEl('resultsContainer');
-            // Only add missing cards to preserve DOM state if possible, 
-            // or mostly just rebuild for simplicity in this v3.
-            // For robustness, we clear and rebuild, scrolling is handled by loop.
             container.innerHTML = '';
-            
             state.questions.forEach(q => {
                 const card = document.createElement('div');
                 card.id = `card-${q.id}`;
                 card.className = "bg-white p-4 rounded border border-slate-200 text-sm transition-all duration-300";
-                
-                // Header
                 let html = `
                     <div class="flex justify-between items-start mb-2">
                         <div class="flex items-center gap-2">
                             <span class="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">${q.id}</span>
-                            <span class="status-indicator text-xs text-slate-400">
-                                ${getStatusIcon(q.status)}
-                            </span>
+                            <span class="status-indicator text-xs text-slate-400">${getStatusIcon(q.status)}</span>
                         </div>
                         <div class="actions opacity-50 hover:opacity-100 transition-opacity">
                             <button onclick="flagIncorrect('${q.id}')" class="text-xs text-red-400 hover:text-red-600" title="Marcar incorrecto"><i class="fas fa-flag"></i></button>
@@ -500,11 +547,9 @@
                     <div class="answer-body text-slate-600 leading-relaxed border-t pt-2 mt-2 border-slate-50">
                         ${q.answer ? formatMD(q.answer) : '<span class="text-slate-300 italic">Pendiente de análisis...</span>'}
                     </div>
-                    
-                    <!-- Feedback Form Hidden -->
                     <div id="fb-${q.id}" class="hidden mt-3 bg-red-50 p-3 rounded border border-red-100">
                         <p class="text-xs font-bold text-red-800 mb-1">Corrección Manual:</p>
-                        <textarea id="tx-${q.id}" class="w-full text-xs p-2 border rounded mb-2" placeholder="Explica qué está mal para que la IA corrija..."></textarea>
+                        <textarea id="tx-${q.id}" class="w-full text-xs p-2 border rounded mb-2" placeholder="Explica qué está mal..."></textarea>
                         <button onclick="reprocess('${q.id}')" class="bg-red-600 text-white text-xs px-3 py-1 rounded">Reprocesar</button>
                     </div>
                 `;
@@ -522,41 +567,35 @@
         function getStatusIcon(status) {
             if(status === 'done') return '<i class="fas fa-check-circle text-green-500"></i> Terminado';
             if(status === 'pending') return '<i class="far fa-clock"></i> En cola';
+            if(status === 'retry') return '<i class="fas fa-sync fa-spin text-orange-500"></i> Reintentando';
             if(status === 'error') return '<i class="fas fa-exclamation-triangle text-red-500"></i> Error';
             return status;
         }
 
-        // --- REPROCESSING WITH FEEDBACK ---
+        // --- REPROCESSING ---
         function flagIncorrect(id) { document.getElementById(`fb-${id}`).classList.toggle('hidden'); }
-        
         async function reprocess(id) {
             const feedback = document.getElementById(`tx-${id}`).value;
             const q = state.questions.find(x => x.id === id);
             if(!q || !feedback) return;
-            
             document.getElementById(`fb-${id}`).classList.add('hidden');
             const card = document.getElementById(`card-${id}`);
             card.querySelector('.answer-body').innerHTML = '<i class="fas fa-sync fa-spin"></i> Corrigiendo...';
-            
             try {
-                const prompt = `PREGUNTA: "${q.text}"\nRESPUESTA PREVIA INCORRECTA SEGÚN USUARIO: "${feedback}"\nTAREA: Genera una nueva respuesta corregida usando las fuentes.\nFUENTES: ${state.sourceText.substring(0,50000)}`;
+                const prompt = `PREGUNTA: "${q.text}"\nERROR REPORTADO: "${feedback}"\nTAREA: Corrige la respuesta basándote en fuentes.\nFUENTES: ${state.sourceText.substring(0,50000)}`;
                 const newAns = await callGemini(prompt);
-                
-                q.answer = newAns;
-                q.status = 'done';
+                q.answer = newAns; q.status = 'done';
                 await saveQuestionState(q);
                 renderCardContent(card, q);
-            } catch(e) {
-                alert(e.message);
-            }
+            } catch(e) { alert(e.message); }
         }
 
-        // --- API & UTILS ---
+        // --- API ---
         async function askGemini(q, ctx, signal) {
-            const prompt = `Actúa como Auditor de Ciberseguridad. 
+            const prompt = `Actúa como Auditor de Seguridad. 
             CONTEXTO (Fuentes): """${ctx.substring(0, 100000)}"""
             PREGUNTA: "${q}"
-            INSTRUCCIÓN: Responde conciso. Cita el nombre del documento fuente. Si no hay info, dilo.`;
+            INSTRUCCIÓN: Responde basándote ÚNICAMENTE en las fuentes proporcionadas. Cita el documento y sección exacta. Si no hay información, indícalo.`;
             return await callGemini(prompt, false, signal);
         }
 
