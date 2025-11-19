@@ -1,401 +1,102 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Framework CISO AI v3.4 (Robust Sync)</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- LIBRERÍAS -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-        .step-active { border-color: #059669; color: #059669; } /* Emerald-600 */
-        .step-inactive { border-color: #e5e7eb; color: #9ca3af; }
-        .loader {
-            border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #059669;
-            width: 20px; height: 20px; animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .scrollbar-thin::-webkit-scrollbar { width: 6px; }
-        .scrollbar-thin::-webkit-scrollbar-track { bg: #f1f1f1; }
-        .scrollbar-thin::-webkit-scrollbar-thumb { bg: #cbd5e1; border-radius: 3px; }
-    </style>
-</head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+This file contains the HTML and CSS for the Intiza Cobranzas webpage. The code defines the structure and styling of the page, 
+including a hero banner, various sections, and a popup form.
 
-    <!-- Header -->
-    <header class="bg-slate-900 text-white p-4 shadow-lg sticky top-0 z-50">
-        <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold flex items-center gap-2">
-                <i class="fas fa-user-shield text-emerald-400"></i> Framework CISO AI
-            </h1>
-            <div class="flex items-center gap-3">
-                <div class="text-xs text-right hidden sm:block">
-                    <div class="font-bold text-emerald-400">MODO CORPORATIVO</div>
-                    <div class="text-slate-400 text-[10px]">Fuentes Centralizadas</div>
-                </div>
-            </div>
-        </div>
-    </header>
+The popup form styling is controlled by the CSS within the <style> tags. To move the close button of the popup form more to the left, 
+you would need to modify the CSS rules targeting the close button within the dialog.popup_form.
 
-    <!-- Main Content -->
-    <main class="flex-grow container mx-auto p-4 md:p-8 max-w-4xl">
-        
-        <!-- API Key -->
-        <div id="apiKeySection" class="mb-8 bg-white p-6 rounded-lg shadow-sm border border-slate-200 border-l-4 border-l-emerald-500">
-            <div class="flex justify-between items-center mb-2">
-                <label class="block text-sm font-bold text-slate-700">Configuración de IA</label>
-                <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-xs text-blue-600 hover:underline flex items-center gap-1"><i class="fas fa-key"></i> Tu API Key</a>
-            </div>
-            <input type="password" id="apiKeyInput" placeholder="Pega tu Gemini API Key aquí..." class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 outline-none font-mono text-sm">
-        </div>
+Looking at the code, the close button seems to be styled with the following rules:
 
-        <!-- Progress Steps -->
-        <div class="flex justify-between mb-8 text-sm font-medium select-none">
-            <div id="step1-ind" class="flex flex-col items-center step-active w-1/3 cursor-pointer transition-all" onclick="showStep(1)">
-                <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center mb-1 bg-white">1</div>
-                <span>Fuentes</span>
-            </div>
-            <div id="step2-ind" class="flex flex-col items-center step-inactive w-1/3 cursor-pointer transition-all" onclick="showStep(2)">
-                <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center mb-1 bg-white">2</div>
-                <span>Cuestionario</span>
-            </div>
-            <div id="step3-ind" class="flex flex-col items-center step-inactive w-1/3 cursor-pointer transition-all" onclick="showStep(3)">
-                <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center mb-1 bg-white">3</div>
-                <span>Análisis</span>
-            </div>
-        </div>
+css
 
-        <!-- STEP 1: Knowledge Base -->
-        <div id="step1" class="step-content bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                    1. Base de Conocimiento
-                    <span id="serverStatusBadge" class="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded border">Local</span>
-                </h2>
-                <div class="flex gap-2">
-                    <button onclick="syncWithServer()" class="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 px-3 py-1 rounded transition font-bold shadow-sm">
-                        <i class="fas fa-sync-alt"></i> Sincronizar Fuentes
-                    </button>
-                    <button onclick="clearDB('documents')" class="text-xs text-red-400 hover:text-red-600 px-2 py-1 transition" title="Borrar todo">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Server Sync Status Area -->
-            <div id="syncArea" class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100 hidden">
-                <div class="flex items-center gap-3">
-                    <div class="loader" id="syncLoader"></div>
-                    <div class="flex-1">
-                        <h4 class="text-sm font-bold text-slate-700">Conectando con Servidor...</h4>
-                        <p class="text-xs text-slate-500 font-mono mt-1" id="syncText">Iniciando...</p>
-                    </div>
-                </div>
-            </div>
+dialog.popup_form button {
+  opacity: .6;
+  position: absolute;
+  right: .5rem; /* This controls the horizontal position from the right */
+  top: .5rem;
+  display: grid;
+  place-content: center;
+  padding: .4rem;
+}
+Use code snippets with caution
 
-            <!-- File List -->
-            <div id="filesListContainer" class="bg-white rounded-lg border border-slate-200 p-0 overflow-hidden mb-4">
-                <div class="bg-slate-100 px-4 py-2 text-xs font-bold text-slate-500 flex justify-between">
-                    <span>DOCUMENTOS ACTIVOS</span>
-                    <span id="storageSize">0 Docs</span>
-                </div>
-                <ul id="uploadedFilesList" class="divide-y divide-slate-100 max-h-60 overflow-y-auto scrollbar-thin">
-                    <li class="p-4 text-center text-slate-400 text-sm italic">No hay documentos cargados. Pulsa "Sincronizar Fuentes".</li>
-                </ul>
-            </div>
-            
-            <!-- Manual Upload (Optional fallback) -->
-            <div class="mt-4 pt-4 border-t border-slate-100">
-                <details>
-                    <summary class="text-xs text-slate-500 cursor-pointer hover:text-blue-600">Opciones avanzadas: Subir archivo local manual</summary>
-                    <div class="mt-2 border-2 border-dashed border-slate-300 rounded-lg p-4 text-center hover:bg-slate-50 relative">
-                        <input type="file" id="sourcePdf" accept="application/pdf" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleSourceUpload()">
-                        <span class="text-xs text-slate-500"><i class="fas fa-upload"></i> Arrastra PDF extra aquí</span>
-                    </div>
-                </details>
-            </div>
+And for mobile:
 
-            <div id="sourceProcessing" class="hidden mt-4 flex items-center justify-center text-blue-600 gap-2">
-                <div class="loader"></div> <span id="procText">Procesando...</span>
-            </div>
+css
 
-            <div class="mt-6 flex justify-end">
-                <button id="btnToStep2" onclick="goToStep2()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg font-medium opacity-50 cursor-not-allowed shadow-md transition-all" disabled>
-                    Siguiente <i class="fas fa-arrow-right ml-2"></i>
-                </button>
-            </div>
-        </div>
+@media (max-width: 767px) {
+  /* BOTÓN CERRAR MÓVIL - CORREGIDO */
+  dialog.popup_form button#cancel_button {
+    position: fixed !important;
+    top: 0.5rem !important;
+    right: 0.5rem !important; /* This controls the horizontal position from the right for mobile */
+    /* ... other styles ... */
+  }
+}
 
-        <!-- STEP 2: Questions Setup -->
-        <div id="step2" class="hidden step-content bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-semibold text-slate-800">2. Cargar Cuestionario</h2>
-                <button onclick="clearDB('questions')" class="text-xs text-orange-500 hover:bg-orange-50 border border-orange-200 px-2 py-1 rounded transition"><i class="fas fa-eraser"></i> Limpiar</button>
-            </div>
-            
-            <div class="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:bg-slate-50 transition-colors cursor-pointer relative group">
-                <input type="file" id="questionFiles" multiple accept=".pdf,.docx,.xlsx,.xls" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="handleQuestionUpload()">
-                <div class="flex flex-col items-center pointer-events-none">
-                    <div class="flex gap-4 mb-3 text-slate-400">
-                        <i class="fas fa-file-pdf text-3xl group-hover:text-red-500"></i>
-                        <i class="fas fa-file-excel text-3xl group-hover:text-green-600"></i>
-                        <i class="fas fa-file-word text-3xl group-hover:text-blue-600"></i>
-                    </div>
-                    <span class="text-slate-600 font-medium">Arrastra tus Cuestionarios aquí</span>
-                </div>
-            </div>
-            <div id="selectedQuestionsFiles" class="mt-4 text-sm text-slate-600 font-mono hidden"></div>
+Use code snippets with caution
 
-            <div id="questionsListArea" class="hidden mt-6">
-                <h3 class="text-md font-bold text-slate-700 mb-2 flex justify-between items-center">
-                    Alcance <span id="qCount" class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">0</span>
-                </h3>
-                <div id="questionsList" class="bg-slate-50 p-4 rounded border border-slate-200 max-h-60 overflow-y-auto space-y-2 text-sm scrollbar-thin"></div>
-            </div>
-            <div id="extractingLoader" class="hidden mt-4 flex items-center justify-center text-blue-600 gap-2"><div class="loader"></div> Analizando...</div>
+To move the button to the left, you have a few options:
 
-            <div class="mt-6 flex justify-between">
-                <button onclick="showStep(1)" class="text-slate-500 hover:text-slate-700 font-medium px-4 py-2">Atrás</button>
-                <button id="btnAnalyze" onclick="extractQuestions()" class="bg-slate-800 hover:bg-slate-900 text-white px-6 py-2 rounded-lg font-medium hidden shadow">Analizar Archivos</button>
-                <button id="btnToStep3" onclick="startQueueProcessing()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg font-medium hidden shadow-lg transform hover:-translate-y-1 transition-all">Comenzar Análisis <i class="fas fa-play ml-1"></i></button>
-            </div>
-        </div>
+Adjust the right property: Increase the value of right (e.g., change .5rem to 1rem or 2rem). This will push the button further away 
+from the right edge, effectively moving it left.
+Use the left property instead: Remove the right property and add a left property with a value that positions the button from the left
+edge of its containing element (the dialog). For example, left: .5rem;.
+To move the button more to the left, you should decrease the right value or use the left property.
 
-        <!-- STEP 3: Results -->
-        <div id="step3" class="hidden step-content bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <div class="flex justify-between items-center mb-4 bg-slate-50 p-3 rounded border border-slate-100 sticky top-0 z-10">
-                <div>
-                    <h2 class="text-lg font-semibold text-slate-800">3. Informe CISO</h2>
-                    <div class="text-xs text-slate-500" id="progressStats">Listo</div>
-                </div>
-                <div class="flex gap-2">
-                     <button id="btnStop" onclick="stopProcessing()" class="hidden text-xs bg-red-100 text-red-600 border border-red-200 px-3 py-1 rounded font-bold hover:bg-red-200"><i class="fas fa-stop"></i> PAUSAR</button>
-                     <button id="btnResume" onclick="startQueueProcessing()" class="hidden text-xs bg-green-100 text-green-700 border border-green-200 px-3 py-1 rounded font-bold hover:bg-green-200"><i class="fas fa-play"></i> REANUDAR</button>
-                </div>
-            </div>
-            <div class="flex gap-2 mb-6 flex-wrap">
-                 <button onclick="copyAllResults()" class="text-xs bg-white border shadow-sm px-3 py-1 rounded hover:bg-slate-50"><i class="fas fa-copy"></i> Copiar</button>
-                 <button onclick="window.print()" class="text-xs bg-white border shadow-sm px-3 py-1 rounded hover:bg-slate-50"><i class="fas fa-print"></i> Imprimir</button>
-                 <button onclick="sendEmail()" class="text-xs bg-blue-50 border border-blue-200 text-blue-700 px-3 py-1 rounded font-semibold"><i class="fas fa-envelope"></i> Email</button>
-            </div>
-            <div id="resultsContainer" class="space-y-6 pb-20 min-h-[300px]"></div>
-            <div class="mt-6 flex justify-start"><button onclick="showStep(2)" class="text-slate-500 hover:text-slate-700 font-medium px-4 py-2">Atrás</button></div>
-        </div>
-    </main>
+For example, to move the button further to the left for both desktop and mobile, you could modify the CSS like this:
 
-    <script>
-        // --- DATABASE ---
-        const DB_NAME = 'AuditorDB_v3'; const STORE_DOCS = 'documents'; const STORE_QUESTIONS = 'questions'; 
-        const dbPromise = new Promise((res, rej) => {
-            const req = indexedDB.open(DB_NAME, 1);
-            req.onupgradeneeded = (e) => {
-                const db = e.target.result;
-                if (!db.objectStoreNames.contains(STORE_DOCS)) db.createObjectStore(STORE_DOCS, { keyPath: 'name' });
-                if (!db.objectStoreNames.contains(STORE_QUESTIONS)) db.createObjectStore(STORE_QUESTIONS, { keyPath: 'id' });
-            };
-            req.onsuccess = (e) => res(e.target.result);
-            req.onerror = (e) => rej(e.target.error);
-        });
-        async function dbOp(mode, store, cb) {
-            const db = await dbPromise;
-            return new Promise((res, rej) => {
-                const tx = db.transaction(store, mode);
-                const req = cb(tx.objectStore(store));
-                tx.oncomplete = () => res(req?.result);
-                tx.onerror = () => rej(tx.error);
-                if (req && req.onsuccess === null) req.onsuccess = ()=>{};
-            });
-        }
-        async function saveDoc(name, content, source='local') { await dbOp('readwrite', STORE_DOCS, s => s.put({name, content, source})); }
-        async function loadDocs() { return new Promise(async res => { (await dbPromise).transaction(STORE_DOCS).objectStore(STORE_DOCS).getAll().onsuccess = e => res(e.target.result); }); }
-        async function saveQ(q) { await dbOp('readwrite', STORE_QUESTIONS, s => s.put(q)); }
-        async function loadQs() { return new Promise(async res => { (await dbPromise).transaction(STORE_QUESTIONS).objectStore(STORE_QUESTIONS).getAll().onsuccess = e => res(e.target.result); }); }
-        async function clearDB(store) { if(confirm("¿Borrar datos?")) { await dbOp('readwrite', store, s => s.clear()); window.location.reload(); } }
+css
 
-        // --- STATE ---
-        let state = { apiKey: localStorage.getItem('ciso_key')||'', sourceText:'', questions:[], abort:null, processing:false };
+dialog.popup_form button {
+  opacity: .6;
+  position: absolute;
+  /* Change right to a larger value, or use left */
+  right: 2rem; /* Example: Increased right value */
+  /* or */
+  /* left: .5rem; */ /* Example: Using left instead of right */
+  top: .5rem;
+  display: grid;
+  place-content: center;
+  padding: .4rem;
+}
 
-        // --- INIT & SYNC LOGIC ---
-        window.onload = async function() {
-            if(state.apiKey) document.getElementById('apiKeyInput').value = state.apiKey;
-            
-            await refreshDocsUI();
-            
-            const qs = await loadQs();
-            if(qs.length > 0) {
-                state.questions = qs.sort((a,b) => a.id.localeCompare(b.id, undefined, {numeric: true}));
-                updateQuestionsUI(); renderResultsUI(); enableStep(3);
-                const pending = state.questions.filter(q => q.status === 'pending');
-                if(pending.length > 0) document.getElementById('btnResume').classList.remove('hidden');
-            }
-        };
+@media (max-width: 767px) {
+  /* BOTÓN CERRAR MÓVIL - CORREGIDO */
+  dialog.popup_form button#cancel_button {
+    position: fixed !important;
+    top: 0.5rem !important;
+    /* Change right to a larger value, or use left */
+    right: 2rem !important; /* Example: Increased right value for mobile */
+    /* or */
+    /* left: .5rem !important; */ /* Example: Using left instead of right for mobile */
+    opacity: 1 !important;
+    font-size: 1rem !important;
+    font-weight: bold !important;
+    padding: 0.5rem !important;
+    z-index: 1001 !important;
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 0.25rem !important;
 
-        async function syncWithServer() {
-            // 1. Safety Check: File Protocol
-            if (window.location.protocol === 'file:') {
-                alert("⚠️ ERROR: La sincronización no funciona en modo local (file://).\n\nPor seguridad, los navegadores bloquean la descarga de archivos locales.\n\nSOLUCIÓN: Sube este archivo a GitHub Pages y pruébalo desde la URL pública (ej: https://tu-usuario.github.io...).");
-                return;
-            }
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    border: 2px solid white !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+  }
+}
 
-            const syncArea = document.getElementById('syncArea');
-            const syncText = document.getElementById('syncText');
-            const loader = document.getElementById('syncLoader');
-            
-            syncArea.classList.remove('hidden');
-            loader.classList.remove('hidden');
-            syncText.className = "text-xs text-slate-500 font-mono mt-1";
-            syncText.textContent = "Buscando 'manifest.json'...";
+Use code snippets with caution
 
-            try {
-                // 2. Fetch Manifest with Cache Busting
-                const manifestRes = await fetch('manifest.json?t=' + new Date().getTime());
-                if(!manifestRes.ok) {
-                    if(manifestRes.status === 404) throw new Error("No se encontró 'manifest.json'. Asegúrate de que está en la misma carpeta que el HTML.");
-                    throw new Error(`Error HTTP ${manifestRes.status} al leer manifest.json`);
-                }
-                
-                let files;
-                try { files = await manifestRes.json(); } catch(e) { throw new Error("El archivo 'manifest.json' no es un JSON válido."); }
-                if(!Array.isArray(files)) throw new Error("El manifest.json debe ser una lista (array) de nombres.");
+Remember to save the changes and refresh the page to see the effect. You might need to experiment with the values to get the desired positioning.
 
-                syncText.textContent = `Detectados ${files.length} archivos. Iniciando descarga...`;
+This file was loaded because it is the main HTML document requested when you navigated to https://www.intiza.com/cobranza.
 
-                let count = 0;
-                let errors = 0;
+Request initiator chain:
 
-                for(const fileName of files) {
-                    try {
-                        syncText.textContent = `Descargando: ${fileName}...`;
-                        const fRes = await fetch(`fuentes/${fileName}`);
-                        if(!fRes.ok) throw new Error(`Status ${fRes.status}`);
-                        
-                        const blob = await fRes.blob();
-                        // Check file type basic support
-                        let text = "";
-                        if(fileName.toLowerCase().endsWith('.pdf')) text = await extractTextFromPDF(blob);
-                        else if(fileName.toLowerCase().endsWith('.docx')) text = await extractTextFromDOCX(blob);
-                        else text = await extractTextFromPDF(blob); // Try PDF as default
+https://www.intiza.com/cobranza
+External Resources:
 
-                        await saveDoc(fileName, text, 'server');
-                        count++;
-                    } catch(innerErr) {
-                        console.error(innerErr);
-                        errors++;
-                        syncText.textContent = `Fallo en ${fileName}. Continuando...`;
-                    }
-                }
-
-                let msg = `¡Sincronización Finalizada!\nDescargados: ${count}`;
-                if(errors > 0) msg += `\nFallidos: ${errors} (Revisa consola)`;
-                
-                syncText.textContent = msg;
-                alert(msg);
-                
-                setTimeout(() => syncArea.classList.add('hidden'), 3000);
-                await refreshDocsUI();
-
-            } catch(e) {
-                syncText.textContent = "Error Crítico: " + e.message;
-                syncText.className = "text-xs text-red-500 font-bold mt-1";
-                alert("Error de Sincronización:\n" + e.message);
-            } finally {
-                loader.classList.add('hidden');
-            }
-        }
-
-        async function refreshDocsUI() {
-            const docs = await loadDocs();
-            const list = document.getElementById('uploadedFilesList');
-            const badge = document.getElementById('serverStatusBadge');
-            
-            if(docs.length > 0) {
-                state.sourceText = docs.map(d => `\n=== DOC (${d.source}): ${d.name} ===\n${d.content}`).join('\n');
-                document.getElementById('storageSize').textContent = docs.length + " Docs";
-                
-                list.innerHTML = '';
-                docs.forEach(d => {
-                    const iconColor = d.source === 'server' ? 'text-purple-500' : 'text-green-500';
-                    const icon = d.source === 'server' ? 'fa-cloud-download-alt' : 'fa-file-upload';
-                    list.innerHTML += `
-                        <li class="p-3 flex justify-between items-center text-sm bg-white hover:bg-slate-50">
-                            <span class="flex items-center gap-2 text-slate-700">
-                                <i class="fas ${icon} ${iconColor}"></i> ${d.name}
-                            </span>
-                            <span class="text-[10px] uppercase tracking-wider text-slate-400">${d.source}</span>
-                        </li>`;
-                });
-
-                document.getElementById('btnToStep2').disabled = false;
-                document.getElementById('btnToStep2').classList.remove('opacity-50', 'cursor-not-allowed');
-                enableStep(2);
-                
-                const hasServer = docs.some(d => d.source === 'server');
-                badge.textContent = hasServer ? "Conectado" : "Local";
-                badge.className = hasServer ? "text-[10px] bg-purple-100 text-purple-600 px-2 py-1 rounded border font-bold" : "text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded border";
-            } else {
-                list.innerHTML = '<li class="p-4 text-center text-slate-400 text-sm italic">Sin documentos. Sube uno manual o Sincroniza.</li>';
-            }
-        }
-
-        // --- EXTRACTION ---
-        async function extractTextFromPDF(blob) {
-            const pdf = await pdfjsLib.getDocument({ data: await blob.arrayBuffer() }).promise;
-            let t = ''; for(let i=1;i<=pdf.numPages;i++) t += `\n[Pág ${i}] ` + (await (await pdf.getPage(i)).getTextContent()).items.map(x=>x.str).join(' ');
-            return t;
-        }
-        async function extractTextFromDOCX(blob) { return `\n[DOCX] ` + (await mammoth.extractRawText({arrayBuffer: await blob.arrayBuffer()})).value; }
-        async function extractTextFromXLSX(blob) {
-            const wb = XLSX.read(await blob.arrayBuffer());
-            let t = `\n[XLSX]`; wb.SheetNames.forEach(n => { t+=`\nSheet: ${n}\n`+XLSX.utils.sheet_to_csv(wb.Sheets[n]); });
-            return t;
-        }
-
-        // --- UI HANDLERS (Step 1 & 2) ---
-        async function handleSourceUpload() { // Manual upload fallback
-            const files = document.getElementById('sourcePdf').files;
-            document.getElementById('sourceProcessing').classList.remove('hidden');
-            for(const f of files) await saveDoc(f.name, await extractTextFromPDF(f), 'local');
-            document.getElementById('sourceProcessing').classList.add('hidden');
-            await refreshDocsUI();
-        }
-
-        function goToStep2() {
-            const k = document.getElementById('apiKeyInput').value.trim();
-            if(!k) return alert("Falta API Key");
-            localStorage.setItem('ciso_key', k); state.apiKey = k; showStep(2);
-        }
-
-        async function handleQuestionUpload() {
-            const f = document.getElementById('questionFiles').files;
-            if(f.length) {
-                document.getElementById('selectedQuestionsFiles').textContent = Array.from(f).map(x=>x.name).join(', ');
-                document.getElementById('selectedQuestionsFiles').classList.remove('hidden');
-                document.getElementById('btnAnalyze').classList.remove('hidden');
-            }
-        }
-
-        async function extractQuestions() {
-            const files = document.getElementById('questionFiles').files;
-            document.getElementById('extractingLoader').classList.remove('hidden');
-            document.getElementById('btnAnalyze').classList.add('hidden');
-            try {
-                let txt = "";
-                for(const f of files) {
-                    const ext = f.name.split('.').pop().toLowerCase();
-                    if(ext==='pdf') txt += await extractTextFromPDF(f);
-                    else if(ext==='docx') txt += await extractTextFromDOCX(f);
-                    else if(ext.startsWith('xls')) txt += await extractTextFromXLSX(f);
-                }
-                const prompt = `ACTÚA COMO CISO. Analiza este documento y extrae una lista de preguntas/controles de auditoría en JSON: [{"id":"1","text":"Pregunta"}]. TEXTO: ${txt.substring(0,50000)}`;
-                const res = await callGemini(prompt, true);
-                
-                // CORRECTED LINE - REPLACED THE BROKEN REGEX
-                const qs = JSON.parse(res.replace(/
+MDN Web Docs: CSS Positioning: https://developer.mozilla.org/en-US/docs/Web/CSS/position
+MDN Web Docs: CSS Units (rem): https://developer.mozilla.org/en-US/docs/Learn/CSS/Building_blocks/Values_and_units#relative_lengths
