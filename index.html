@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Framework CISO AI v3.4 (Robust Sync)</title>
+    <title>Framework CISO AI v3.6 (Debug Extremo)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- LIBRERÍAS -->
@@ -16,7 +16,7 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
-        .step-active { border-color: #059669; color: #059669; } /* Emerald-600 */
+        .step-active { border-color: #059669; color: #059669; } 
         .step-inactive { border-color: #e5e7eb; color: #9ca3af; }
         .loader {
             border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #059669;
@@ -26,9 +26,23 @@
         .scrollbar-thin::-webkit-scrollbar { width: 6px; }
         .scrollbar-thin::-webkit-scrollbar-track { bg: #f1f1f1; }
         .scrollbar-thin::-webkit-scrollbar-thumb { bg: #cbd5e1; border-radius: 3px; }
+        
+        #globalError { display: none; position: fixed; top: 0; left: 0; width: 100%; background: #ef4444; color: white; padding: 10px; z-index: 9999; text-align: center; font-weight: bold; font-size: 12px; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- MONITOR DE ERRORES GLOBAL -->
+    <div id="globalError"></div>
+    <script>
+        window.onerror = function(msg, url, line, col, error) {
+            const div = document.getElementById('globalError');
+            div.style.display = 'block';
+            div.innerHTML = `⚠️ ERROR CRÍTICO DETECTADO: ${msg} (Línea: ${line})`;
+            console.error("Global Catch:", error);
+            return false;
+        };
+    </script>
 
     <!-- Header -->
     <header class="bg-slate-900 text-white p-4 shadow-lg sticky top-0 z-50">
@@ -38,8 +52,8 @@
             </h1>
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
-                    <div class="font-bold text-emerald-400">MODO CORPORATIVO</div>
-                    <div class="text-slate-400 text-[10px]">Fuentes Centralizadas</div>
+                    <div class="font-bold text-emerald-400">MODO DEBUG v3.6</div>
+                    <div class="text-slate-400 text-[10px]">Sistema de Rescate</div>
                 </div>
             </div>
         </div>
@@ -77,12 +91,12 @@
         <div id="step1" class="step-content bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                    1. Base de Conocimiento
-                    <span id="serverStatusBadge" class="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded border">Local</span>
+                    1. Base de Conocimiento Central
+                    <span id="serverStatusBadge" class="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded border">Desconectado</span>
                 </h2>
                 <div class="flex gap-2">
-                    <button onclick="syncWithServer()" class="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 px-3 py-1 rounded transition font-bold shadow-sm">
-                        <i class="fas fa-sync-alt"></i> Sincronizar Fuentes
+                    <button onclick="debugSync()" class="text-xs bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded transition font-bold shadow-md flex items-center gap-2">
+                        <i class="fas fa-sync-alt"></i> SINCRONIZAR AHORA
                     </button>
                     <button onclick="clearDB('documents')" class="text-xs text-red-400 hover:text-red-600 px-2 py-1 transition" title="Borrar todo">
                         <i class="fas fa-trash"></i>
@@ -90,13 +104,15 @@
                 </div>
             </div>
             
-            <!-- Server Sync Status Area -->
-            <div id="syncArea" class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100 hidden">
-                <div class="flex items-center gap-3">
-                    <div class="loader" id="syncLoader"></div>
+            <!-- Server Sync Status Area (ALWAYS VISIBLE FOR DEBUG) -->
+            <div id="syncArea" class="mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                <div class="flex items-start gap-3">
+                    <div class="loader hidden" id="syncLoader"></div>
                     <div class="flex-1">
-                        <h4 class="text-sm font-bold text-slate-700">Conectando con Servidor...</h4>
-                        <p class="text-xs text-slate-500 font-mono mt-1" id="syncText">Iniciando...</p>
+                        <h4 class="text-sm font-bold text-slate-700" id="syncTitle">Estado de Sincronización</h4>
+                        <div class="text-xs text-slate-500 font-mono mt-2 p-2 bg-white border rounded h-32 overflow-y-auto" id="syncLog">
+                            Esperando acción del usuario...
+                        </div>
                     </div>
                 </div>
             </div>
@@ -108,14 +124,14 @@
                     <span id="storageSize">0 Docs</span>
                 </div>
                 <ul id="uploadedFilesList" class="divide-y divide-slate-100 max-h-60 overflow-y-auto scrollbar-thin">
-                    <li class="p-4 text-center text-slate-400 text-sm italic">No hay documentos cargados. Pulsa "Sincronizar Fuentes".</li>
+                    <li class="p-4 text-center text-slate-400 text-sm italic">No hay documentos cargados.</li>
                 </ul>
             </div>
             
-            <!-- Manual Upload (Optional fallback) -->
+            <!-- Manual Upload -->
             <div class="mt-4 pt-4 border-t border-slate-100">
                 <details>
-                    <summary class="text-xs text-slate-500 cursor-pointer hover:text-blue-600">Opciones avanzadas: Subir archivo local manual</summary>
+                    <summary class="text-xs text-slate-500 cursor-pointer hover:text-blue-600">Opciones: Subir archivo local manualmente</summary>
                     <div class="mt-2 border-2 border-dashed border-slate-300 rounded-lg p-4 text-center hover:bg-slate-50 relative">
                         <input type="file" id="sourcePdf" accept="application/pdf" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleSourceUpload()">
                         <span class="text-xs text-slate-500"><i class="fas fa-upload"></i> Arrastra PDF extra aquí</span>
@@ -192,6 +208,19 @@
     </main>
 
     <script>
+        // --- LOGGING SYSTEM (MOVED TOP) ---
+        function log(msg, type='info') {
+            const box = document.getElementById('syncLog');
+            if(!box) return;
+            const d = document.createElement('div');
+            d.textContent = `> ${msg}`;
+            if(type==='error') d.style.color = 'red';
+            else if(type==='success') d.style.color = 'green';
+            box.appendChild(d);
+            box.scrollTop = box.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${msg}`);
+        }
+
         // --- DATABASE ---
         const DB_NAME = 'AuditorDB_v3'; const STORE_DOCS = 'documents'; const STORE_QUESTIONS = 'questions'; 
         const dbPromise = new Promise((res, rej) => {
@@ -226,7 +255,6 @@
         // --- INIT & SYNC LOGIC ---
         window.onload = async function() {
             if(state.apiKey) document.getElementById('apiKeyInput').value = state.apiKey;
-            
             await refreshDocsUI();
             
             const qs = await loadQs();
@@ -236,76 +264,87 @@
                 const pending = state.questions.filter(q => q.status === 'pending');
                 if(pending.length > 0) document.getElementById('btnResume').classList.remove('hidden');
             }
+            
+            // Check connection
+            if(window.location.protocol === 'file:') {
+                 log("MODO LOCAL DETECTADO: La sincronización de servidor no funcionará por seguridad del navegador.", 'error');
+                 alert("AVISO: Estás ejecutando el archivo localmente (file://).\n\nLa función 'Sincronizar' fallará porque los navegadores bloquean las peticiones a archivos locales.\n\nPara que funcione la sincronización, debes subirlo a un servidor web o GitHub Pages.");
+            }
         };
 
-        async function syncWithServer() {
-            // 1. Safety Check: File Protocol
+        async function debugSync() {
+            // Immediate feedback to prove button works
+            const loader = document.getElementById('syncLoader');
+            loader.classList.remove('hidden');
+            
+            log("Iniciando proceso de sincronización...");
+            
             if (window.location.protocol === 'file:') {
-                alert("⚠️ ERROR: La sincronización no funciona en modo local (file://).\n\nPor seguridad, los navegadores bloquean la descarga de archivos locales.\n\nSOLUCIÓN: Sube este archivo a GitHub Pages y pruébalo desde la URL pública (ej: https://tu-usuario.github.io...).");
+                log("ERROR FATAL: No se puede sincronizar desde file://. Usa http:// o https://", 'error');
+                loader.classList.add('hidden');
                 return;
             }
 
-            const syncArea = document.getElementById('syncArea');
-            const syncText = document.getElementById('syncText');
-            const loader = document.getElementById('syncLoader');
-            
-            syncArea.classList.remove('hidden');
-            loader.classList.remove('hidden');
-            syncText.className = "text-xs text-slate-500 font-mono mt-1";
-            syncText.textContent = "Buscando 'manifest.json'...";
-
             try {
-                // 2. Fetch Manifest with Cache Busting
+                // 1. Fetch Manifest
+                log("Solicitando 'manifest.json'...");
+                // Use timestamp to prevent caching
                 const manifestRes = await fetch('manifest.json?t=' + new Date().getTime());
-                if(!manifestRes.ok) {
-                    if(manifestRes.status === 404) throw new Error("No se encontró 'manifest.json'. Asegúrate de que está en la misma carpeta que el HTML.");
-                    throw new Error(`Error HTTP ${manifestRes.status} al leer manifest.json`);
-                }
+                
+                if(manifestRes.status === 404) throw new Error("Archivo 'manifest.json' no encontrado (404).");
+                if(!manifestRes.ok) throw new Error(`Error de red: ${manifestRes.status}`);
                 
                 let files;
-                try { files = await manifestRes.json(); } catch(e) { throw new Error("El archivo 'manifest.json' no es un JSON válido."); }
-                if(!Array.isArray(files)) throw new Error("El manifest.json debe ser una lista (array) de nombres.");
+                try { 
+                    files = await manifestRes.json(); 
+                } catch(e) { 
+                    throw new Error("El archivo 'manifest.json' está corrupto o no es JSON válido."); 
+                }
+                
+                if(!Array.isArray(files)) throw new Error("El formato de 'manifest.json' es incorrecto (debe ser una lista [ ]).");
+                log(`Manifest OK. ${files.length} archivos listados.`, 'success');
 
-                syncText.textContent = `Detectados ${files.length} archivos. Iniciando descarga...`;
-
+                // 2. Download Files
                 let count = 0;
-                let errors = 0;
-
                 for(const fileName of files) {
-                    try {
-                        syncText.textContent = `Descargando: ${fileName}...`;
-                        const fRes = await fetch(`fuentes/${fileName}`);
-                        if(!fRes.ok) throw new Error(`Status ${fRes.status}`);
-                        
-                        const blob = await fRes.blob();
-                        // Check file type basic support
-                        let text = "";
-                        if(fileName.toLowerCase().endsWith('.pdf')) text = await extractTextFromPDF(blob);
-                        else if(fileName.toLowerCase().endsWith('.docx')) text = await extractTextFromDOCX(blob);
-                        else text = await extractTextFromPDF(blob); // Try PDF as default
+                    log(`Descargando: ${fileName}...`);
+                    // Encode to handle spaces/special chars safely
+                    const safeName = encodeURIComponent(fileName);
+                    const fRes = await fetch(`fuentes/${safeName}`);
+                    
+                    if(fRes.status === 404) {
+                        log(`ERROR: No existe 'fuentes/${fileName}'. Verifica mayúsculas/minúsculas.`, 'error');
+                        continue;
+                    }
+                    if(!fRes.ok) {
+                        log(`Error descarga ${fileName}: ${fRes.status}`, 'error');
+                        continue;
+                    }
 
+                    const blob = await fRes.blob();
+                    log(`Procesando ${fileName} (${blob.size} bytes)...`);
+                    
+                    let text = "";
+                    const lowerName = fileName.toLowerCase();
+                    try {
+                        if(lowerName.endsWith('.pdf')) text = await extractTextFromPDF(blob);
+                        else if(lowerName.endsWith('.docx')) text = await extractTextFromDOCX(blob);
+                        else text = await extractTextFromPDF(blob); // Default fallback
+                        
                         await saveDoc(fileName, text, 'server');
+                        log(`GUARDADO: ${fileName}`, 'success');
                         count++;
-                    } catch(innerErr) {
-                        console.error(innerErr);
-                        errors++;
-                        syncText.textContent = `Fallo en ${fileName}. Continuando...`;
+                    } catch(parseErr) {
+                        log(`Error leyendo contenido de ${fileName}: ${parseErr.message}`, 'error');
                     }
                 }
 
-                let msg = `¡Sincronización Finalizada!\nDescargados: ${count}`;
-                if(errors > 0) msg += `\nFallidos: ${errors} (Revisa consola)`;
-                
-                syncText.textContent = msg;
-                alert(msg);
-                
-                setTimeout(() => syncArea.classList.add('hidden'), 3000);
+                log(`FINALIZADO. ${count} archivos sincronizados correctamente.`, 'success');
                 await refreshDocsUI();
 
             } catch(e) {
-                syncText.textContent = "Error Crítico: " + e.message;
-                syncText.className = "text-xs text-red-500 font-bold mt-1";
-                alert("Error de Sincronización:\n" + e.message);
+                log(`ERROR CRÍTICO: ${e.message}`, 'error');
+                alert("Error de sincronización: " + e.message);
             } finally {
                 loader.classList.add('hidden');
             }
@@ -325,11 +364,11 @@
                     const iconColor = d.source === 'server' ? 'text-purple-500' : 'text-green-500';
                     const icon = d.source === 'server' ? 'fa-cloud-download-alt' : 'fa-file-upload';
                     list.innerHTML += `
-                        <li class="p-3 flex justify-between items-center text-sm bg-white hover:bg-slate-50">
+                        <li class="p-3 flex justify-between items-center text-sm bg-white hover:bg-slate-50 border-b border-slate-50">
                             <span class="flex items-center gap-2 text-slate-700">
                                 <i class="fas ${icon} ${iconColor}"></i> ${d.name}
                             </span>
-                            <span class="text-[10px] uppercase tracking-wider text-slate-400">${d.source}</span>
+                            <span class="text-[10px] uppercase tracking-wider text-slate-400 font-bold">${d.source}</span>
                         </li>`;
                 });
 
@@ -341,7 +380,7 @@
                 badge.textContent = hasServer ? "Conectado" : "Local";
                 badge.className = hasServer ? "text-[10px] bg-purple-100 text-purple-600 px-2 py-1 rounded border font-bold" : "text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded border";
             } else {
-                list.innerHTML = '<li class="p-4 text-center text-slate-400 text-sm italic">Sin documentos. Sube uno manual o Sincroniza.</li>';
+                list.innerHTML = '<li class="p-4 text-center text-slate-400 text-sm italic">Sin documentos. Pulsa "Sincronizar".</li>';
             }
         }
 
@@ -358,8 +397,8 @@
             return t;
         }
 
-        // --- UI HANDLERS (Step 1 & 2) ---
-        async function handleSourceUpload() { // Manual upload fallback
+        // --- UI HANDLERS ---
+        async function handleSourceUpload() { 
             const files = document.getElementById('sourcePdf').files;
             document.getElementById('sourceProcessing').classList.remove('hidden');
             for(const f of files) await saveDoc(f.name, await extractTextFromPDF(f), 'local');
@@ -397,5 +436,4 @@
                 const prompt = `ACTÚA COMO CISO. Analiza este documento y extrae una lista de preguntas/controles de auditoría en JSON: [{"id":"1","text":"Pregunta"}]. TEXTO: ${txt.substring(0,50000)}`;
                 const res = await callGemini(prompt, true);
                 
-                // CORRECTED LINE - REPLACED THE BROKEN REGEX
                 const qs = JSON.parse(res.replace(/
