@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Framework CISO AI v3.7 (Stable)</title>
+    <title>INTIZA CISO AI OFFICER v3.8 (Hybrid Input)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- LIBRERÍAS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
-        // Configuración del Worker de PDF.js (Esencial para evitar errores de carga)
+        // Configuración del Worker de PDF.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
@@ -48,12 +48,12 @@
     <header class="bg-slate-900 text-white p-4 shadow-lg sticky top-0 z-50">
         <div class="container mx-auto flex justify-between items-center">
             <h1 class="text-xl font-bold flex items-center gap-2">
-                <i class="fas fa-user-shield text-emerald-400"></i> Framework CISO AI
+                <i class="fas fa-user-shield text-emerald-400"></i> INTIZA CISO AI OFFICER
             </h1>
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-emerald-400">MODO CORPORATIVO</div>
-                    <div class="text-slate-400 text-[10px]">v3.7 (Stable)</div>
+                    <div class="text-slate-400 text-[10px]">v3.8</div>
                 </div>
             </div>
         </div>
@@ -95,7 +95,6 @@
                     <span id="serverStatusBadge" class="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded border">Estado: Local</span>
                 </h2>
                 <div class="flex gap-2">
-                    <!-- IMPORTANTE: La llamada es window.debugSync() -->
                     <button onclick="window.debugSync()" class="text-xs bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded transition font-bold shadow-md flex items-center gap-2">
                         <i class="fas fa-sync-alt"></i> SINCRONIZAR
                     </button>
@@ -105,7 +104,6 @@
                 </div>
             </div>
             
-            <!-- Server Sync Status Area -->
             <div id="syncArea" class="mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200 hidden">
                 <div class="flex items-start gap-3">
                     <div class="loader" id="syncLoader"></div>
@@ -147,25 +145,37 @@
             </div>
         </div>
 
-        <!-- STEP 2: Questions Setup -->
+        <!-- STEP 2: Questions Setup (UPDATED) -->
         <div id="step2" class="hidden step-content bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-semibold text-slate-800">2. Cargar Cuestionario</h2>
+                <h2 class="text-lg font-semibold text-slate-800">2. Cargar Preguntas</h2>
                 <button onclick="window.clearDB('questions')" class="text-xs text-orange-500 hover:bg-orange-50 border border-orange-200 px-2 py-1 rounded transition"><i class="fas fa-eraser"></i> Limpiar</button>
             </div>
             
+            <!-- 1. File Upload Zone -->
             <div class="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:bg-slate-50 transition-colors cursor-pointer relative group">
-                <input type="file" id="questionFiles" multiple accept=".pdf,.docx,.xlsx,.xls" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="handleQuestionUpload()">
+                <input type="file" id="questionFiles" multiple accept=".pdf,.docx,.xlsx,.xls" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="checkStep2Readiness()">
                 <div class="flex flex-col items-center pointer-events-none">
                     <div class="flex gap-4 mb-3 text-slate-400">
                         <i class="fas fa-file-pdf text-3xl group-hover:text-red-500"></i>
                         <i class="fas fa-file-excel text-3xl group-hover:text-green-600"></i>
                         <i class="fas fa-file-word text-3xl group-hover:text-blue-600"></i>
                     </div>
-                    <span class="text-slate-600 font-medium">Arrastra tus Cuestionarios aquí</span>
+                    <span class="text-slate-600 font-medium">Arrastra tus archivos de Cuestionario aquí</span>
                 </div>
             </div>
-            <div id="selectedQuestionsFiles" class="mt-4 text-sm text-slate-600 font-mono hidden"></div>
+            <div id="selectedQuestionsFiles" class="mt-2 text-xs text-slate-500 font-mono hidden text-center"></div>
+
+            <!-- 2. Text Area (NEW) -->
+            <div class="mt-6 relative">
+                <div class="absolute top-0 left-0 -mt-3 ml-3 bg-white px-2 text-xs font-bold text-slate-400">O PEGAR PREGUNTAS (TEXTO PLANO)</div>
+                <textarea id="manualQuestionText" 
+                    class="w-full border border-slate-300 rounded-lg p-3 text-sm text-slate-700 focus:ring-2 focus:ring-emerald-500 outline-none resize-none scrollbar-thin" 
+                    rows="5" 
+                    placeholder="Pega aquí una o varias preguntas si no tienes un archivo... (Soporta múltiples líneas)"
+                    oninput="checkStep2Readiness()"></textarea>
+                <div class="text-[10px] text-slate-400 text-right mt-1">Máx visible ~100 palabras (scrolleable)</div>
+            </div>
 
             <div id="questionsListArea" class="hidden mt-6">
                 <h3 class="text-md font-bold text-slate-700 mb-2 flex justify-between items-center">
@@ -177,7 +187,7 @@
 
             <div class="mt-6 flex justify-between">
                 <button onclick="showStep(1)" class="text-slate-500 hover:text-slate-700 font-medium px-4 py-2">Atrás</button>
-                <button id="btnAnalyze" onclick="extractQuestions()" class="bg-slate-800 hover:bg-slate-900 text-white px-6 py-2 rounded-lg font-medium hidden shadow">Analizar Archivos</button>
+                <button id="btnAnalyze" onclick="extractQuestions()" class="bg-slate-800 hover:bg-slate-900 text-white px-6 py-2 rounded-lg font-medium hidden shadow">Analizar Contenido</button>
                 <button id="btnToStep3" onclick="startQueueProcessing()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg font-medium hidden shadow-lg transform hover:-translate-y-1 transition-all">Comenzar Análisis <i class="fas fa-play ml-1"></i></button>
             </div>
         </div>
@@ -203,6 +213,16 @@
             <div class="mt-6 flex justify-start"><button onclick="showStep(2)" class="text-slate-500 hover:text-slate-700 font-medium px-4 py-2">Atrás</button></div>
         </div>
     </main>
+
+    <!-- FOOTER LEGAL -->
+    <footer class="bg-slate-100 p-6 text-center border-t border-slate-200 mt-8">
+        <p class="text-slate-700 font-semibold text-sm mb-1">
+            Gracias por utilizar nuestro sistema de respuestas SGSI, recuerde que siempre debe validarlas con un analista de Seguridad.
+        </p>
+        <p class="text-slate-500 text-xs">
+            Las mismas se basan en nuestro Marco Normativo y Certificación ISO 27001:2022
+        </p>
+    </footer>
 
     <script>
         // --- UTILS ---
@@ -247,7 +267,7 @@
             });
         }
 
-        // Definición Global de funciones DB
+        // Global DB Functions
         window.saveDoc = async function(name, content, source='local') { await dbOp('readwrite', STORE_DOCS, s => s.put({name, content, source})); };
         window.loadDocs = async function() { return new Promise(async res => { (await dbPromise).transaction(STORE_DOCS).objectStore(STORE_DOCS).getAll().onsuccess = e => res(e.target.result); }); };
         window.saveQ = async function(q) { await dbOp('readwrite', STORE_QUESTIONS, s => s.put(q)); };
@@ -273,10 +293,9 @@
             if(window.location.protocol === 'file:') {
                  log("ERROR: Modo local file:// detectado. La sincronización no funcionará.", 'error');
             }
-            console.log("SISTEMA INICIADO CORRECTAMENTE");
         };
 
-        // --- SYNC FUNCTION (Global) ---
+        // --- SYNC FUNCTION ---
         window.debugSync = async function() {
             const loader = getEl('syncLoader');
             const area = getEl('syncArea');
@@ -376,7 +395,7 @@
             return t;
         }
         async function extractTextFromDOCX(blob) { return `\n[DOCX] ` + (await mammoth.extractRawText({arrayBuffer: await blob.arrayBuffer()})).value; }
-        async function extractTextFromXLSX(blob) { // FIX: Using XLSX utils correctly
+        async function extractTextFromXLSX(blob) {
             const wb = XLSX.read(await blob.arrayBuffer());
             let t = `\n[XLSX]`; wb.SheetNames.forEach(n => { t+=`\nSheet: ${n}\n`+XLSX.utils.sheet_to_csv(wb.Sheets[n]); });
             return t;
@@ -397,31 +416,53 @@
             localStorage.setItem('ciso_key', k); state.apiKey = k; showStep(2);
         }
 
-        async function handleQuestionUpload() {
-            const f = getEl('questionFiles').files;
-            if(f.length) {
-                getEl('selectedQuestionsFiles').textContent = Array.from(f).map(x=>x.name).join(', ');
+        // NEW: Check both input types
+        window.checkStep2Readiness = function() {
+            const files = getEl('questionFiles').files;
+            const text = getEl('manualQuestionText').value.trim();
+            
+            if(files.length > 0) {
+                getEl('selectedQuestionsFiles').textContent = Array.from(files).map(x=>x.name).join(', ');
                 getEl('selectedQuestionsFiles').classList.remove('hidden');
-                getEl('btnAnalyze').classList.remove('hidden');
+            } else {
+                getEl('selectedQuestionsFiles').classList.add('hidden');
             }
-        }
+
+            if(files.length > 0 || text.length > 0) {
+                getEl('btnAnalyze').classList.remove('hidden');
+            } else {
+                getEl('btnAnalyze').classList.add('hidden');
+            }
+        };
 
         async function extractQuestions() {
             const files = getEl('questionFiles').files;
+            const manualText = getEl('manualQuestionText').value.trim();
+            
             getEl('extractingLoader').classList.remove('hidden');
             getEl('btnAnalyze').classList.add('hidden');
+            
             try {
                 let txt = "";
+                
+                // 1. Read Files
                 for(const f of files) {
                     const ext = f.name.split('.').pop().toLowerCase();
                     if(ext==='pdf') txt += await extractTextFromPDF(f);
                     else if(ext==='docx') txt += await extractTextFromDOCX(f);
                     else if(ext.startsWith('xls')) txt += await extractTextFromXLSX(f);
                 }
+
+                // 2. Append Manual Text
+                if(manualText) {
+                    txt += `\n\n--- PREGUNTAS MANUALES ---\n${manualText}\n\n`;
+                }
+
+                if(!txt.trim()) throw new Error("No se encontró texto para analizar.");
+
                 const prompt = `ACTÚA COMO CISO. Analiza y extrae preguntas/controles en JSON: [{"id":"1","text":"Pregunta"}]. TEXTO: ${txt.substring(0,50000)}`;
                 const res = await callGemini(prompt, true);
                 
-                // FIX: Safe Regex replacement using new RegExp to avoid parser issues
                 const cleanJson = res.replace(new RegExp('```json|```', 'g'), '').trim();
                 const qs = JSON.parse(cleanJson).map(q=>({...q, status:'pending', attempts:0}));
                 
@@ -432,7 +473,7 @@
                 getEl('extractingLoader').classList.add('hidden');
                 getEl('questionsListArea').classList.remove('hidden');
                 getEl('btnToStep3').classList.remove('hidden');
-            } catch(e) { alert(e.message); console.error(e); getEl('extractingLoader').classList.add('hidden'); }
+            } catch(e) { alert(e.message); console.error(e); getEl('extractingLoader').classList.add('hidden'); getEl('btnAnalyze').classList.remove('hidden'); }
         }
 
         function updateQuestionsUI() {
