@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v4.4 (Model Fix)</title>
+    <title>INTIZA CISO AI OFFICER v4.5 (Universal Fix)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- LIBRERÍAS -->
@@ -53,7 +53,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-emerald-400">MODO CORPORATIVO</div>
-                    <div class="text-slate-400 text-[10px]">v4.4</div>
+                    <div class="text-slate-400 text-[10px]">v4.5</div>
                 </div>
             </div>
         </div>
@@ -158,6 +158,7 @@
                 <button onclick="window.clearDB('questions')" class="text-xs text-orange-500 hover:bg-orange-50 border border-orange-200 px-2 py-1 rounded transition"><i class="fas fa-eraser"></i> Limpiar</button>
             </div>
             
+            <!-- 1. File Upload Zone -->
             <div class="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:bg-slate-50 transition-colors cursor-pointer relative group">
                 <input type="file" id="questionFiles" multiple accept=".pdf,.docx,.xlsx,.xls" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="checkStep2Readiness()">
                 <div class="flex flex-col items-center pointer-events-none">
@@ -171,6 +172,12 @@
             </div>
             <div id="selectedQuestionsFiles" class="mt-2 text-xs text-slate-500 font-mono hidden text-center"></div>
             
+            <!-- TIP -->
+            <p class="text-[10px] text-amber-700 mt-2 bg-amber-50 p-2 rounded border border-amber-100 flex items-start gap-2 mx-auto max-w-xl">
+                <i class="fas fa-lightbulb mt-0.5 text-amber-500"></i> 
+                <span><strong>TIP:</strong> Para una mejor lectura del archivo trate de no dejar espacios en blanco en el nombre del mismo, use guiones (-) o (_).</span>
+            </p>
+
             <div class="mt-6 relative">
                 <div class="absolute top-0 left-0 -mt-3 ml-3 bg-white px-2 text-xs font-bold text-slate-400">O PEGAR PREGUNTAS (TEXTO PLANO)</div>
                 <textarea id="manualQuestionText" 
@@ -230,7 +237,8 @@
 
     <script>
         // --- UTILS & CONFIG ---
-        const GEMINI_MODEL = "gemini-1.5-flash-001"; // VERSIÓN ESTABLE 001
+        // CAMBIO A UN MODELO GENÉRICO Y ESTABLE
+        const GEMINI_MODEL = "gemini-1.5-flash"; 
         const API_DELAY_MS = 4000; 
 
         function log(msg, type='info') {
@@ -432,14 +440,6 @@
         }
 
         // --- UI HANDLERS ---
-        async function handleSourceUpload() { 
-            const files = getEl('sourcePdf').files;
-            getEl('sourceProcessing').classList.remove('hidden');
-            for(const f of files) await window.saveDoc(f.name, await extractTextFromPDF(f), 'local');
-            getEl('sourceProcessing').classList.add('hidden');
-            await refreshDocsUI();
-        }
-
         function goToStep2() {
             const k = getEl('apiKeyInput').value.trim();
             if(!k) return alert("Falta API Key");
