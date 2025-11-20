@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v4.8 (Restored)</title>
+    <title>INTIZA CISO AI OFFICER v4.9 (Anti-Overload)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- LIBRERÍAS -->
@@ -52,7 +52,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-emerald-400">MODO CORPORATIVO</div>
-                    <div class="text-slate-400 text-[10px]">v4.8 (Stable Restore)</div>
+                    <div class="text-slate-400 text-[10px]">v4.9 (Resiliente)</div>
                 </div>
             </div>
         </div>
@@ -137,7 +137,6 @@
                 </ul>
             </div>
             
-            <!-- TIP (Only tip, no manual upload per request) -->
             <div class="mt-4 pt-4 border-t border-slate-100">
                  <p class="text-[10px] text-amber-700 bg-amber-50 p-2 rounded border border-amber-100 flex items-start gap-2">
                     <i class="fas fa-lightbulb mt-0.5 text-amber-500"></i> 
@@ -237,9 +236,8 @@
 
     <script>
         // --- UTILS & CONFIG ---
-        // RESTAURADO EL MODELO QUE FUNCIONABA (Aunque tenga límites de 10 RPM)
         const GEMINI_MODEL = "gemini-2.5-flash-preview-09-2025"; 
-        const API_DELAY_MS = 4000; // Mantengo el delay de 4s para suavizar el rate limit
+        const API_DELAY_MS = 6000; // AUMENTADO A 6 SEGUNDOS PARA EVITAR "OVERLOADED"
 
         function log(msg, type='info') {
             const box = document.getElementById('syncLog');
@@ -474,7 +472,6 @@
             try {
                 let txt = "";
                 
-                // 1. Read Files
                 for(const f of files) {
                     const ext = f.name.split('.').pop().toLowerCase();
                     if(ext==='pdf') txt += await extractTextFromPDF(f);
@@ -528,33 +525,20 @@
                 await sleep(API_DELAY_MS); 
 
                 try {
-                    const prompt = `
-                        ROL: Actúa como un CISO (Chief Information Security Officer) Senior y Auditor Experto.
-                        OBJETIVO: Responder la pregunta del usuario basándose EXHAUSTIVAMENTE en la documentación provista.
-                        
-                        INSTRUCCIONES DE BÚSQUEDA:
-                        1. NO te quedes con la primera coincidencia. Muchos temas se tocan de forma general en una "Política" pero se detallan en un "Procedimiento" o "Estándar".
-                        2. Debes leer TODOS los documentos del contexto antes de formular la respuesta.
-                        3. PRIORIZA la especificidad: Si un documento es más detallado o específico sobre el tema de la pregunta, ese tiene mayor peso que uno general.
-                        4. SINTETIZA: Si varios documentos hablan del tema, combínalos para dar la respuesta más completa posible.
-                        
-                        FORMATO DE RESPUESTA:
-                        - Respuesta directa y técnica en español.
-                        - Cita explícitamente el/los nombre(s) del documento(s) y sección(es) de donde extrajiste la información.
-                        
-                        CONTEXTO (Fuentes): 
-                        """${state.sourceText.substring(0, 1000000)}"""
-                        
-                        PREGUNTA: "${q.text}"
-                    `;
+                    // --- RETRY LOGIC FOR 503/OVERLOADED ---
+                    const ans = await askGeminiWithRetry(q.text, state.sourceText, state.abort.signal);
                     
-                    const ans = await callGemini(prompt, false, state.abort.signal);
                     q.status='done'; q.answer=ans; await window.saveQ(q); renderCard(card,q);
+                    
                 } catch(e) {
                     if(e.name==='AbortError') break;
                     q.attempts++;
-                    if(q.attempts<3) { q.status='retry'; if(card) card.querySelector('.status-ind').textContent=`Reintentando (${q.attempts})...`; }
-                    else { q.status='error'; q.answer="Error: "+e.message; if(card) card.classList.add('border-red-500'); }
+                    
+                    // Permanent failure after retries inside askGeminiWithRetry logic or other errors
+                    q.status='error'; 
+                    q.answer="Error: "+e.message; 
+                    if(card) card.classList.add('border-red-500'); 
+                    
                     await window.saveQ(q);
                 }
                 if(card) card.classList.remove('border-emerald-400','shadow-md');
@@ -600,20 +584,57 @@
             
             await sleep(API_DELAY_MS); 
             
-            q.answer = await callGemini(p, false); q.status='done'; await window.saveQ(q); renderCard(c,q);
+            try {
+                 q.answer = await askGeminiWithRetry(p, "", null); 
+                 q.status='done'; 
+                 await window.saveQ(q); 
+                 renderCard(c,q);
+            } catch(e) {
+                alert(e.message);
+            }
         };
 
-        async function askGemini(q, ctx, sig) {
-            const p = `Rol: CISO Senior. Responde en Español. Contexto: """${ctx.substring(0,100000)}""". Pregunta: "${q}". Responde solo con evidencia del contexto. Sé directivo y técnico.`;
-            return await callGemini(p, false, sig);
+        async function askGeminiWithRetry(qText, ctx, sig) {
+            const p = ctx ? `Rol: CISO Senior. Responde en Español. Contexto: """${ctx.substring(0,1000000)}""". Pregunta: "${qText}". Responde solo con evidencia del contexto. Sé directivo y técnico.` : qText;
+            
+            let attempts = 0;
+            while(attempts < 5) {
+                try {
+                    return await callGemini(p, false, sig);
+                } catch(e) {
+                    // Detect Overloaded
+                    if(e.message.includes('503') || e.message.includes('Overloaded')) {
+                        attempts++;
+                        const wait = Math.pow(2, attempts) * 2000; // 2s, 4s, 8s...
+                        console.warn(`Modelo Saturado. Reintentando en ${wait/1000}s...`);
+                        // Update UI if possible
+                        const prog = getEl('progressStats');
+                        if(prog) prog.textContent = `Saturado. Esperando ${wait/1000}s...`;
+                        
+                        await sleep(wait);
+                        continue;
+                    }
+                    throw e; // Throw other errors immediately
+                }
+            }
+            throw new Error("Servidor ocupado tras 5 intentos.");
         }
 
         async function callGemini(text, json, signal) {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${state.apiKey}`;
             const body = { contents:[{parts:[{text}]}] }; if(json) body.generationConfig={responseMimeType:"application/json"};
             const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body), signal });
-            if(!r.ok) throw new Error((await r.json()).error?.message);
+            
+            if(!r.ok) {
+                const err = await r.json();
+                throw new Error(err.error?.message || r.statusText);
+            }
             return (await r.json()).candidates[0].content.parts[0].text;
+        }
+
+        async function callGeminiExtract(text) {
+             // Specialized simpler call for extraction
+             return await callGemini(text, true, null);
         }
 
         // --- NAV ---
