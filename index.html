@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v4.2 (Stable Limits)</title>
+    <title>INTIZA CISO AI OFFICER v4.3 (Deep Search)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- LIBRERÍAS -->
@@ -52,7 +52,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-emerald-400">MODO CORPORATIVO</div>
-                    <div class="text-slate-400 text-[10px]">v4.2 (Rate Limit Safe)</div>
+                    <div class="text-slate-400 text-[10px]">v4.3 (Deep Search)</div>
                 </div>
             </div>
         </div>
@@ -169,6 +169,12 @@
                 </div>
             </div>
             <div id="selectedQuestionsFiles" class="mt-2 text-xs text-slate-500 font-mono hidden text-center"></div>
+            
+            <!-- TIP -->
+            <p class="text-[10px] text-amber-700 mt-2 bg-amber-50 p-2 rounded border border-amber-100 flex items-start gap-2 mx-auto max-w-xl">
+                <i class="fas fa-lightbulb mt-0.5 text-amber-500"></i> 
+                <span><strong>TIP:</strong> Para una mejor lectura del archivo trate de no dejar espacios en blanco en el nombre del mismo, use guiones (-) o (_).</span>
+            </p>
 
             <div class="mt-6 relative">
                 <div class="absolute top-0 left-0 -mt-3 ml-3 bg-white px-2 text-xs font-bold text-slate-400">O PEGAR PREGUNTAS (TEXTO PLANO)</div>
@@ -229,9 +235,7 @@
 
     <script>
         // --- UTILS & CONFIG ---
-        // CAMBIO CLAVE: Usar modelo 1.5 Flash (Stable) en lugar de 2.5 (Preview) para mejores límites
         const GEMINI_MODEL = "gemini-1.5-flash"; 
-        // CAMBIO CLAVE: Delay de 4 segundos entre preguntas para respetar el límite de 15 RPM (60s / 4s = 15 req)
         const API_DELAY_MS = 4000; 
 
         function log(msg, type='info') {
@@ -466,6 +470,7 @@
             
             try {
                 let txt = "";
+                
                 for(const f of files) {
                     const ext = f.name.split('.').pop().toLowerCase();
                     if(ext==='pdf') txt += await extractTextFromPDF(f);
@@ -516,12 +521,31 @@
                 }
                 getEl('progressStats').textContent=`Analizando ID ${q.id}...`;
                 
-                // --- RATE LIMIT PROTECTION ---
                 await sleep(API_DELAY_MS); 
-                // -----------------------------
 
                 try {
-                    const ans = await askGemini(q.text, state.sourceText, state.abort.signal);
+                    // --- ACTUALIZADO: Lógica de búsqueda profunda y exhaustiva ---
+                    const prompt = `
+                        ROL: Actúa como un CISO (Chief Information Security Officer) Senior y Auditor Experto.
+                        OBJETIVO: Responder la pregunta del usuario basándose EXHAUSTIVAMENTE en la documentación provista.
+                        
+                        INSTRUCCIONES DE BÚSQUEDA:
+                        1. NO te quedes con la primera coincidencia. Muchos temas se tocan de forma general en una "Política" pero se detallan en un "Procedimiento" o "Estándar".
+                        2. Debes leer TODOS los documentos del contexto antes de formular la respuesta.
+                        3. PRIORIZA la especificidad: Si un documento es más detallado o específico sobre el tema de la pregunta, ese tiene mayor peso que uno general.
+                        4. SINTETIZA: Si varios documentos hablan del tema, combínalos para dar la respuesta más completa posible.
+                        
+                        FORMATO DE RESPUESTA:
+                        - Respuesta directa y técnica en español.
+                        - Cita explícitamente el/los nombre(s) del documento(s) y sección(es) de donde extrajiste la información.
+                        
+                        CONTEXTO (Fuentes): 
+                        """${state.sourceText.substring(0, 1000000)}"""
+                        
+                        PREGUNTA: "${q.text}"
+                    `;
+                    
+                    const ans = await callGemini(prompt, false, state.abort.signal);
                     q.status='done'; q.answer=ans; await window.saveQ(q); renderCard(card,q);
                 } catch(e) {
                     if(e.name==='AbortError') break;
@@ -568,17 +592,14 @@
             const fb = getEl(`tx-${id}`).value; const q = state.questions.find(x=>x.id===id);
             getEl(`fb-${id}`).classList.add('hidden');
             const c = getEl(`card-${id}`); c.querySelector('.ans-body').innerHTML='<i class="fas fa-spin fa-sync"></i>';
-            const p = `CISO MODE. PREGUNTA: "${q.text}" ERROR: "${fb}". CORRIGE SEGÚN FUENTES: ${state.sourceText.substring(0,40000)}`;
             
-            await sleep(API_DELAY_MS); // Rate limit protect
+            // Prompt corregido también para reprocesamiento
+            const p = `ROL: CISO Senior. TAREA: Corregir respuesta anterior. PREGUNTA: "${q.text}" ERROR REPORTADO: "${fb}". INSTRUCCIÓN: Revisa exhaustivamente TODAS las fuentes nuevamente. FUENTES: ${state.sourceText.substring(0,1000000)}`;
             
-            q.answer = await callGemini(p); q.status='done'; await window.saveQ(q); renderCard(c,q);
+            await sleep(API_DELAY_MS); 
+            
+            q.answer = await callGemini(p, false); q.status='done'; await window.saveQ(q); renderCard(c,q);
         };
-
-        async function askGemini(q, ctx, sig) {
-            const p = `Rol: CISO Senior. Responde en Español. Contexto: """${ctx.substring(0,100000)}""". Pregunta: "${q}". Responde solo con evidencia del contexto. Sé directivo y técnico.`;
-            return await callGemini(p, false, sig);
-        }
 
         async function callGemini(text, json, signal) {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${state.apiKey}`;
