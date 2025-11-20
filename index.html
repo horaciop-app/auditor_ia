@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v4.6 (Model Selector)</title>
+    <title>INTIZA CISO AI OFFICER v4.7 (Model Fix)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- LIBRERÍAS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
-        // Configuración del Worker de PDF.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
@@ -53,7 +52,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-emerald-400">MODO CORPORATIVO</div>
-                    <div class="text-slate-400 text-[10px]">v4.6</div>
+                    <div class="text-slate-400 text-[10px]">v4.7</div>
                 </div>
             </div>
         </div>
@@ -85,14 +84,13 @@
             <div class="flex gap-2 flex-col sm:flex-row">
                 <input type="password" id="apiKeyInput" placeholder="Pega tu Gemini API Key aquí..." class="flex-1 p-2 border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 outline-none font-mono text-sm">
                 <select id="modelSelect" class="p-2 border border-slate-300 rounded bg-slate-50 text-sm font-mono focus:ring-2 focus:ring-emerald-500 outline-none" onchange="saveModelPreference()">
-                    <option value="gemini-1.5-flash">Gemini 1.5 Flash (Default)</option>
-                    <option value="gemini-1.5-flash-001">Gemini 1.5 Flash (v001)</option>
-                    <option value="gemini-1.5-flash-002">Gemini 1.5 Flash (v002)</option>
-                    <option value="gemini-1.5-flash-8b">Gemini 1.5 Flash (8b - Lite)</option>
-                    <option value="gemini-1.5-pro">Gemini 1.5 Pro (Más potente)</option>
+                    <option value="gemini-1.5-flash-002">Gemini 1.5 Flash (v002 - Recomendado)</option>
+                    <option value="gemini-1.5-flash-001">Gemini 1.5 Flash (v001 - Estable)</option>
+                    <option value="gemini-1.5-pro-002">Gemini 1.5 Pro (v002 - Potente)</option>
+                    <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Experimental)</option>
                 </select>
             </div>
-            <p class="text-[10px] text-slate-400 mt-2">Si recibes error de "Model Not Found", cambia el modelo en la lista desplegable.</p>
+            <p class="text-[10px] text-slate-400 mt-2">Selecciona un modelo diferente si experimentas errores de "Not Found".</p>
         </div>
 
         <!-- Progress Steps -->
@@ -148,8 +146,6 @@
                 </ul>
             </div>
             
-            <!-- Manual Upload removed per strict mode -->
-
             <div id="sourceProcessing" class="hidden mt-4 flex items-center justify-center text-blue-600 gap-2">
                 <div class="loader"></div> <span id="procText">Procesando...</span>
             </div>
@@ -168,7 +164,7 @@
                 <button onclick="window.clearDB('questions')" class="text-xs text-orange-500 hover:bg-orange-50 border border-orange-200 px-2 py-1 rounded transition"><i class="fas fa-eraser"></i> Limpiar</button>
             </div>
             
-            <!-- 1. File Upload -->
+            <!-- File Upload -->
             <div class="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:bg-slate-50 transition-colors cursor-pointer relative group">
                 <input type="file" id="questionFiles" multiple accept=".pdf,.docx,.xlsx,.xls" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="checkStep2Readiness()">
                 <div class="flex flex-col items-center pointer-events-none">
@@ -182,13 +178,12 @@
             </div>
             <div id="selectedQuestionsFiles" class="mt-2 text-xs text-slate-500 font-mono hidden text-center"></div>
             
-            <!-- TIP -->
             <p class="text-[10px] text-amber-700 mt-2 bg-amber-50 p-2 rounded border border-amber-100 flex items-start gap-2 mx-auto max-w-xl">
                 <i class="fas fa-lightbulb mt-0.5 text-amber-500"></i> 
                 <span><strong>TIP:</strong> Para una mejor lectura del archivo trate de no dejar espacios en blanco en el nombre del mismo, use guiones (-) o (_).</span>
             </p>
 
-            <!-- 2. Manual Text -->
+            <!-- Manual Text -->
             <div class="mt-6 relative">
                 <div class="absolute top-0 left-0 -mt-3 ml-3 bg-white px-2 text-xs font-bold text-slate-400">O PEGAR PREGUNTAS (TEXTO PLANO)</div>
                 <textarea id="manualQuestionText" 
@@ -248,6 +243,7 @@
 
     <script>
         // --- UTILS & CONFIG ---
+        const DEFAULT_MODEL = "gemini-1.5-flash-002"; // Modelo por defecto actualizado
         const API_DELAY_MS = 4000; 
 
         function log(msg, type='info') {
@@ -299,16 +295,19 @@
         window.clearDB = async function(store) { if(confirm("¿Borrar datos?")) { await dbOp('readwrite', store, s => s.clear()); window.location.reload(); } };
 
         // --- STATE ---
-        let state = { apiKey: localStorage.getItem('ciso_key')||'', sourceText:'', questions:[], abort:null, processing:false, model:'gemini-1.5-flash' };
+        let state = { 
+            apiKey: localStorage.getItem('ciso_key')||'', 
+            sourceText:'', 
+            questions:[], 
+            abort:null, 
+            processing:false, 
+            model: localStorage.getItem('ciso_model') || DEFAULT_MODEL 
+        };
 
         // --- INIT ---
         window.onload = async function() {
             if(state.apiKey) getEl('apiKeyInput').value = state.apiKey;
-            const savedModel = localStorage.getItem('ciso_model');
-            if(savedModel) { 
-                state.model = savedModel;
-                getEl('modelSelect').value = savedModel;
-            }
+            getEl('modelSelect').value = state.model; // Set dropdown to saved model
             
             await refreshDocsUI();
             
@@ -548,6 +547,7 @@
                 await sleep(API_DELAY_MS); 
 
                 try {
+                    // --- LÓGICA DE BÚSQUEDA EXHAUSTIVA ---
                     const prompt = `
                         ROL: Actúa como un CISO (Chief Information Security Officer) Senior y Auditor Experto.
                         OBJETIVO: Responder la pregunta del usuario basándose EXHAUSTIVAMENTE en la documentación provista.
@@ -629,10 +629,13 @@
         }
 
         async function callGemini(text, json, signal) {
-            // Use user selected model or default
-            const modelToUse = state.model || GEMINI_MODEL;
+            // Get user selected model OR default if null
+            const modelToUse = state.model || DEFAULT_MODEL;
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:generateContent?key=${state.apiKey}`;
-            const body = { contents:[{parts:[{text}]}] }; if(json) body.generationConfig={responseMimeType:"application/json"};
+            
+            const body = { contents:[{parts:[{text}]}] }; 
+            if(json) body.generationConfig={responseMimeType:"application/json"};
+            
             const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body), signal });
             if(!r.ok) throw new Error((await r.json()).error?.message);
             return (await r.json()).candidates[0].content.parts[0].text;
