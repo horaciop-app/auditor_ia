@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v5.0 (Deep + Stable)</title>
+    <title>INTIZA CISO AI OFFICER v5.1 (Model Swap)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- LIBRERÍAS -->
@@ -52,7 +52,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-emerald-400">MODO CORPORATIVO</div>
-                    <div class="text-slate-400 text-[10px]">v5.0</div>
+                    <div class="text-slate-400 text-[10px]">v5.1</div>
                 </div>
             </div>
         </div>
@@ -75,13 +75,26 @@
             <p class="text-[10px] text-slate-400 mt-1 text-right">Estimado basado en el texto cargado (1M límite)</p>
         </div>
 
-        <!-- API Key -->
+        <!-- API Key & Model Selector -->
         <div id="apiKeySection" class="mb-8 bg-white p-6 rounded-lg shadow-sm border border-slate-200 border-l-4 border-l-emerald-500">
             <div class="flex justify-between items-center mb-2">
                 <label class="block text-sm font-bold text-slate-700">Configuración de IA</label>
                 <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-xs text-blue-600 hover:underline flex items-center gap-1"><i class="fas fa-key"></i> Tu API Key</a>
             </div>
-            <input type="password" id="apiKeyInput" placeholder="Pega tu Gemini API Key aquí..." class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 outline-none font-mono text-sm">
+            <div class="flex gap-2 flex-col sm:flex-row">
+                <input type="password" id="apiKeyInput" placeholder="Pega tu Gemini API Key aquí..." class="flex-1 p-2 border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 outline-none font-mono text-sm">
+                
+                <!-- SELECTOR DE MODELO (SOLUCIÓN A LÍMITE TPM) -->
+                <select id="modelSelect" class="p-2 border border-slate-300 rounded bg-slate-50 text-sm font-mono focus:ring-2 focus:ring-emerald-500 outline-none" onchange="saveModelPreference()">
+                    <option value="gemini-1.5-flash">Gemini 1.5 Flash (Recomendado/Rápido)</option>
+                    <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Experimental/Nuevo)</option>
+                    <option value="gemini-1.5-pro">Gemini 1.5 Pro (Mayor Inteligencia)</option>
+                    <option value="gemini-1.5-flash-8b">Gemini 1.5 Flash-8B (Lite/Económico)</option>
+                </select>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-2">
+                <i class="fas fa-info-circle"></i> Si recibes error de "Quota Exceeded" o "Overloaded", cambia el modelo en la lista superior.
+            </p>
         </div>
 
         <!-- Progress Steps -->
@@ -236,8 +249,8 @@
 
     <script>
         // --- UTILS & CONFIG ---
-        const GEMINI_MODEL = "gemini-2.5-flash-preview-09-2025"; 
-        const API_DELAY_MS = 6000; 
+        const DEFAULT_MODEL = "gemini-1.5-flash"; 
+        const API_DELAY_MS = 6000; // 6s delay for rate limit safety
 
         function log(msg, type='info') {
             const box = document.getElementById('syncLog');
@@ -288,11 +301,26 @@
         window.clearDB = async function(store) { if(confirm("¿Borrar datos?")) { await dbOp('readwrite', store, s => s.clear()); window.location.reload(); } };
 
         // --- STATE ---
-        let state = { apiKey: localStorage.getItem('ciso_key')||'', sourceText:'', questions:[], abort:null, processing:false };
+        let state = { 
+            apiKey: localStorage.getItem('ciso_key')||'', 
+            sourceText:'', 
+            questions:[], 
+            abort:null, 
+            processing:false, 
+            model: localStorage.getItem('ciso_model') || DEFAULT_MODEL 
+        };
 
         // --- INIT ---
         window.onload = async function() {
             if(state.apiKey) getEl('apiKeyInput').value = state.apiKey;
+            
+            // Restore saved model
+            const savedModel = localStorage.getItem('ciso_model');
+            if(savedModel) {
+                state.model = savedModel;
+                getEl('modelSelect').value = savedModel;
+            }
+
             await refreshDocsUI();
             
             const qs = await window.loadQs();
@@ -306,6 +334,12 @@
             if(window.location.protocol === 'file:') {
                  log("ERROR: Modo local file:// detectado. La sincronización no funcionará.", 'error');
             }
+        };
+
+        window.saveModelPreference = function() {
+            const m = getEl('modelSelect').value;
+            state.model = m;
+            localStorage.setItem('ciso_model', m);
         };
 
         // --- SYNC FUNCTION ---
@@ -525,7 +559,7 @@
                 await sleep(API_DELAY_MS); 
 
                 try {
-                    // --- DEEP SEARCH PROMPT INJECTED HERE ---
+                    // --- PROMPT MAESTRO CISO (Deep Search) ---
                     const prompt = `
                         ROL: Actúa como un CISO (Chief Information Security Officer) Senior y Auditor Experto.
                         OBJETIVO: Responder la pregunta del usuario basándose EXHAUSTIVAMENTE en la documentación provista.
@@ -613,34 +647,39 @@
         };
 
         async function askGeminiWithRetry(qText, ctx, sig) {
-            // If ctx is provided, wrap it. If empty (reproc case), just send qText as is.
-            const p = ctx ? `Rol: CISO Senior. Responde en Español. Contexto: """${ctx.substring(0,1000000)}""". Pregunta: "${qText}". Responde solo con evidencia del contexto. Sé directivo y técnico.` : qText;
+            // Use selected model or default
+            const modelToUse = state.model || DEFAULT_MODEL;
+            
+            // Logic for Deep Search is inside qText if ctx is empty (reproc case) 
+            // or constructed here if ctx is present (normal flow)
+            // But in startQueueProcessing we already constructed the full prompt.
+            // So we just pass qText if ctx is empty (the prompt itself).
+            const p = ctx ? qText : qText; // Logic simplification, prompt construction is upstream
             
             let attempts = 0;
             while(attempts < 5) {
                 try {
-                    return await callGemini(p, false, sig);
+                    return await callGemini(p, false, sig, modelToUse);
                 } catch(e) {
                     // Detect Overloaded
                     if(e.message.includes('503') || e.message.includes('Overloaded')) {
                         attempts++;
                         const wait = Math.pow(2, attempts) * 2000; // 2s, 4s, 8s...
                         console.warn(`Modelo Saturado. Reintentando en ${wait/1000}s...`);
-                        // Update UI if possible
                         const prog = getEl('progressStats');
                         if(prog) prog.textContent = `Saturado. Esperando ${wait/1000}s...`;
-                        
                         await sleep(wait);
                         continue;
                     }
-                    throw e; // Throw other errors immediately
+                    throw e; 
                 }
             }
             throw new Error("Servidor ocupado tras 5 intentos.");
         }
 
-        async function callGemini(text, json, signal) {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${state.apiKey}`;
+        async function callGemini(text, json, signal, modelOverride) {
+            const m = modelOverride || state.model || DEFAULT_MODEL;
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${state.apiKey}`;
             const body = { contents:[{parts:[{text}]}] }; if(json) body.generationConfig={responseMimeType:"application/json"};
             const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body), signal });
             
