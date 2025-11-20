@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v4.9 (Anti-Overload)</title>
+    <title>INTIZA CISO AI OFFICER v5.0 (Deep + Stable)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- LIBRERÍAS -->
@@ -52,7 +52,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-emerald-400">MODO CORPORATIVO</div>
-                    <div class="text-slate-400 text-[10px]">v4.9 (Resiliente)</div>
+                    <div class="text-slate-400 text-[10px]">v5.0</div>
                 </div>
             </div>
         </div>
@@ -133,7 +133,7 @@
                     <span id="storageSize">0 Docs</span>
                 </div>
                 <ul id="uploadedFilesList" class="divide-y divide-slate-100 max-h-60 overflow-y-auto scrollbar-thin">
-                    <li class="p-4 text-center text-slate-400 text-sm italic">No hay documentos cargados.</li>
+                    <li class="p-4 text-center text-slate-400 text-sm italic">No hay documentos cargados. Pulsa "Sincronizar Fuentes".</li>
                 </ul>
             </div>
             
@@ -237,7 +237,7 @@
     <script>
         // --- UTILS & CONFIG ---
         const GEMINI_MODEL = "gemini-2.5-flash-preview-09-2025"; 
-        const API_DELAY_MS = 6000; // AUMENTADO A 6 SEGUNDOS PARA EVITAR "OVERLOADED"
+        const API_DELAY_MS = 6000; 
 
         function log(msg, type='info') {
             const box = document.getElementById('syncLog');
@@ -525,16 +525,34 @@
                 await sleep(API_DELAY_MS); 
 
                 try {
-                    // --- RETRY LOGIC FOR 503/OVERLOADED ---
-                    const ans = await askGeminiWithRetry(q.text, state.sourceText, state.abort.signal);
+                    // --- DEEP SEARCH PROMPT INJECTED HERE ---
+                    const prompt = `
+                        ROL: Actúa como un CISO (Chief Information Security Officer) Senior y Auditor Experto.
+                        OBJETIVO: Responder la pregunta del usuario basándose EXHAUSTIVAMENTE en la documentación provista.
+                        
+                        INSTRUCCIONES DE BÚSQUEDA:
+                        1. NO te quedes con la primera coincidencia. Muchos temas se tocan de forma general en una "Política" pero se detallan en un "Procedimiento" o "Estándar".
+                        2. Debes leer TODOS los documentos del contexto antes de formular la respuesta.
+                        3. PRIORIZA la especificidad: Si un documento es más detallado o específico sobre el tema de la pregunta, ese tiene mayor peso que uno general.
+                        4. SINTETIZA: Si varios documentos hablan del tema, combínalos para dar la respuesta más completa posible.
+                        
+                        FORMATO DE RESPUESTA:
+                        - Respuesta directa y técnica en español.
+                        - Cita explícitamente el/los nombre(s) del documento(s) y sección(es) de donde extrajiste la información.
+                        
+                        CONTEXTO (Fuentes): 
+                        """${state.sourceText.substring(0, 1000000)}"""
+                        
+                        PREGUNTA: "${q.text}"
+                    `;
+                    
+                    const ans = await askGeminiWithRetry(prompt, "", state.abort.signal);
                     
                     q.status='done'; q.answer=ans; await window.saveQ(q); renderCard(card,q);
-                    
                 } catch(e) {
                     if(e.name==='AbortError') break;
                     q.attempts++;
                     
-                    // Permanent failure after retries inside askGeminiWithRetry logic or other errors
                     q.status='error'; 
                     q.answer="Error: "+e.message; 
                     if(card) card.classList.add('border-red-500'); 
@@ -595,6 +613,7 @@
         };
 
         async function askGeminiWithRetry(qText, ctx, sig) {
+            // If ctx is provided, wrap it. If empty (reproc case), just send qText as is.
             const p = ctx ? `Rol: CISO Senior. Responde en Español. Contexto: """${ctx.substring(0,1000000)}""". Pregunta: "${qText}". Responde solo con evidencia del contexto. Sé directivo y técnico.` : qText;
             
             let attempts = 0;
@@ -630,11 +649,6 @@
                 throw new Error(err.error?.message || r.statusText);
             }
             return (await r.json()).candidates[0].content.parts[0].text;
-        }
-
-        async function callGeminiExtract(text) {
-             // Specialized simpler call for extraction
-             return await callGemini(text, true, null);
         }
 
         // --- NAV ---
