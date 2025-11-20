@@ -138,19 +138,7 @@
                 </ul>
             </div>
             
-            <div class="mt-4 pt-4 border-t border-slate-100">
-                <details>
-                    <summary class="text-xs text-slate-500 cursor-pointer hover:text-blue-600 font-medium">Opciones: Subir archivo local manualmente</summary>
-                    <div class="mt-2 border-2 border-dashed border-slate-300 rounded-lg p-4 text-center hover:bg-slate-50 relative">
-                        <input type="file" id="sourcePdf" accept="application/pdf" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleSourceUpload()">
-                        <span class="text-xs text-slate-500"><i class="fas fa-upload"></i> Arrastra PDF extra aquí</span>
-                    </div>
-                    <p class="text-[10px] text-amber-700 mt-2 bg-amber-50 p-2 rounded border border-amber-100 flex items-start gap-2">
-                        <i class="fas fa-lightbulb mt-0.5 text-amber-500"></i> 
-                        <span><strong>TIP:</strong> Para una mejor lectura del archivo trate de no dejar espacios en blanco en el nombre del mismo, coloque en su lugar un guion medio (-) o un guion bajo (_)</span>
-                    </p>
-                </details>
-            </div>
+            <!-- Opción manual eliminada para Modo Corporativo Estricto -->
 
             <div id="sourceProcessing" class="hidden mt-4 flex items-center justify-center text-blue-600 gap-2">
                 <div class="loader"></div> <span id="procText">Procesando...</span>
