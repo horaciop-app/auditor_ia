@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v4.1 (Token Meter)</title>
+    <title>INTIZA CISO AI OFFICER v4.2 (Stable Limits)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- LIBRERÍAS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
-        // Configuración del Worker de PDF.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
@@ -53,7 +52,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-emerald-400">MODO CORPORATIVO</div>
-                    <div class="text-slate-400 text-[10px]">v4.1</div>
+                    <div class="text-slate-400 text-[10px]">v4.2 (Rate Limit Safe)</div>
                 </div>
             </div>
         </div>
@@ -62,7 +61,7 @@
     <!-- Main Content -->
     <main class="flex-grow container mx-auto p-4 md:p-8 max-w-4xl">
         
-        <!-- Token Meter (NUEVO) -->
+        <!-- Token Meter -->
         <div class="mb-4 bg-white p-4 rounded-lg shadow-sm border border-slate-200">
             <div class="flex justify-between items-end mb-2">
                 <label class="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1">
@@ -101,7 +100,7 @@
             </div>
         </div>
 
-        <!-- STEP 1: Knowledge Base (Strict Mode: Sync Only) -->
+        <!-- STEP 1: Knowledge Base -->
         <div id="step1" class="step-content bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
@@ -138,19 +137,7 @@
                 </ul>
             </div>
             
-            <div class="mt-4 pt-4 border-t border-slate-100">
-                <details>
-                    <summary class="text-xs text-slate-500 cursor-pointer hover:text-blue-600 font-medium">Opciones: Subir archivo local manualmente</summary>
-                    <div class="mt-2 border-2 border-dashed border-slate-300 rounded-lg p-4 text-center hover:bg-slate-50 relative">
-                        <input type="file" id="sourcePdf" accept="application/pdf" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleSourceUpload()">
-                        <span class="text-xs text-slate-500"><i class="fas fa-upload"></i> Arrastra PDF extra aquí</span>
-                    </div>
-                    <p class="text-[10px] text-amber-700 mt-2 bg-amber-50 p-2 rounded border border-amber-100 flex items-start gap-2">
-                        <i class="fas fa-lightbulb mt-0.5 text-amber-500"></i> 
-                        <span><strong>TIP:</strong> Para una mejor lectura del archivo trate de no dejar espacios en blanco en el nombre del mismo, coloque en su lugar un guion medio (-) o un guion bajo (_)</span>
-                    </p>
-                </details>
-            </div>
+            <!-- Manual Upload option removed for Strict Corp Mode -->
 
             <div id="sourceProcessing" class="hidden mt-4 flex items-center justify-center text-blue-600 gap-2">
                 <div class="loader"></div> <span id="procText">Procesando...</span>
@@ -163,14 +150,13 @@
             </div>
         </div>
 
-        <!-- STEP 2: Questions Setup (Hybrid) -->
+        <!-- STEP 2: Questions Setup -->
         <div id="step2" class="hidden step-content bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-lg font-semibold text-slate-800">2. Cargar Preguntas</h2>
                 <button onclick="window.clearDB('questions')" class="text-xs text-orange-500 hover:bg-orange-50 border border-orange-200 px-2 py-1 rounded transition"><i class="fas fa-eraser"></i> Limpiar</button>
             </div>
             
-            <!-- 1. File Upload Zone -->
             <div class="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:bg-slate-50 transition-colors cursor-pointer relative group">
                 <input type="file" id="questionFiles" multiple accept=".pdf,.docx,.xlsx,.xls" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="checkStep2Readiness()">
                 <div class="flex flex-col items-center pointer-events-none">
@@ -184,7 +170,6 @@
             </div>
             <div id="selectedQuestionsFiles" class="mt-2 text-xs text-slate-500 font-mono hidden text-center"></div>
 
-            <!-- 2. Text Area (Manual) -->
             <div class="mt-6 relative">
                 <div class="absolute top-0 left-0 -mt-3 ml-3 bg-white px-2 text-xs font-bold text-slate-400">O PEGAR PREGUNTAS (TEXTO PLANO)</div>
                 <textarea id="manualQuestionText" 
@@ -232,7 +217,7 @@
         </div>
     </main>
 
-    <!-- FOOTER LEGAL -->
+    <!-- FOOTER -->
     <footer class="bg-slate-100 p-6 text-center border-t border-slate-200 mt-8">
         <p class="text-slate-700 font-semibold text-sm mb-1">
             Gracias por utilizar nuestro sistema de respuestas SGSI, recuerde que siempre debe validarlas con un analista de Seguridad.
@@ -243,7 +228,12 @@
     </footer>
 
     <script>
-        // --- UTILS ---
+        // --- UTILS & CONFIG ---
+        // CAMBIO CLAVE: Usar modelo 1.5 Flash (Stable) en lugar de 2.5 (Preview) para mejores límites
+        const GEMINI_MODEL = "gemini-1.5-flash"; 
+        // CAMBIO CLAVE: Delay de 4 segundos entre preguntas para respetar el límite de 15 RPM (60s / 4s = 15 req)
+        const API_DELAY_MS = 4000; 
+
         function log(msg, type='info') {
             const box = document.getElementById('syncLog');
             if(!box) return;
@@ -255,8 +245,8 @@
             box.scrollTop = box.scrollHeight;
             console.log(`[${type.toUpperCase()}] ${msg}`);
         }
-
         function getEl(id) { return document.getElementById(id); }
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
         // --- DATABASE ---
         const DB_NAME = 'AuditorDB_v3'; 
@@ -382,11 +372,10 @@
             }
         };
         
-        // --- TOKEN METER UPDATE ---
         function updateTokenMeter() {
             const textLength = state.sourceText.length;
             const estimatedTokens = Math.ceil(textLength / 4); 
-            const maxTokens = 1000000; // 1 Million context window
+            const maxTokens = 1000000; 
             const percentage = Math.min((estimatedTokens / maxTokens) * 100, 100);
             
             const bar = document.getElementById('tokenProgressBar');
@@ -410,8 +399,6 @@
             if(docs.length > 0) {
                 state.sourceText = docs.map(d => `\n=== DOC (${d.source}): ${d.name} ===\n${d.content}`).join('\n');
                 getEl('storageSize').textContent = docs.length + " Docs";
-                
-                // Update Meter
                 updateTokenMeter();
                 
                 list.innerHTML = '';
@@ -428,7 +415,7 @@
                 badge.textContent = hasServer ? "Conectado" : "Local";
                 badge.className = hasServer ? "text-[10px] bg-purple-100 text-purple-600 px-2 py-1 rounded border font-bold" : "text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded border";
             } else {
-                updateTokenMeter(); // Reset to 0 if empty
+                updateTokenMeter();
             }
         }
 
@@ -446,21 +433,12 @@
         }
 
         // --- UI HANDLERS ---
-        async function handleSourceUpload() { 
-            const files = getEl('sourcePdf').files;
-            getEl('sourceProcessing').classList.remove('hidden');
-            for(const f of files) await window.saveDoc(f.name, await extractTextFromPDF(f), 'local');
-            getEl('sourceProcessing').classList.add('hidden');
-            await refreshDocsUI();
-        }
-
         function goToStep2() {
             const k = getEl('apiKeyInput').value.trim();
             if(!k) return alert("Falta API Key");
             localStorage.setItem('ciso_key', k); state.apiKey = k; showStep(2);
         }
 
-        // NEW: Check both input types
         window.checkStep2Readiness = function() {
             const files = getEl('questionFiles').files;
             const text = getEl('manualQuestionText').value.trim();
@@ -488,19 +466,13 @@
             
             try {
                 let txt = "";
-                
-                // 1. Read Files
                 for(const f of files) {
                     const ext = f.name.split('.').pop().toLowerCase();
                     if(ext==='pdf') txt += await extractTextFromPDF(f);
                     else if(ext==='docx') txt += await extractTextFromDOCX(f);
                     else if(ext.startsWith('xls')) txt += await extractTextFromXLSX(f);
                 }
-
-                // 2. Append Manual Text
-                if(manualText) {
-                    txt += `\n\n--- PREGUNTAS MANUALES ---\n${manualText}\n\n`;
-                }
+                if(manualText) txt += `\n\n--- PREGUNTAS MANUALES ---\n${manualText}\n\n`;
 
                 if(!txt.trim()) throw new Error("No se encontró texto para analizar.");
 
@@ -540,10 +512,14 @@
                 if(card) {
                     card.scrollIntoView({behavior:'smooth',block:'center'});
                     card.classList.add('border-emerald-400','shadow-md');
-                    card.querySelector('.status-ind').innerHTML=`<i class="fas fa-circle-notch fa-spin text-emerald-500"></i> Analizando...`;
+                    card.querySelector('.status-ind').innerHTML=`<i class="fas fa-circle-notch fa-spin text-emerald-500"></i> Analizando (Espera ${API_DELAY_MS/1000}s)...`;
                 }
                 getEl('progressStats').textContent=`Analizando ID ${q.id}...`;
                 
+                // --- RATE LIMIT PROTECTION ---
+                await sleep(API_DELAY_MS); 
+                // -----------------------------
+
                 try {
                     const ans = await askGemini(q.text, state.sourceText, state.abort.signal);
                     q.status='done'; q.answer=ans; await window.saveQ(q); renderCard(card,q);
@@ -593,6 +569,9 @@
             getEl(`fb-${id}`).classList.add('hidden');
             const c = getEl(`card-${id}`); c.querySelector('.ans-body').innerHTML='<i class="fas fa-spin fa-sync"></i>';
             const p = `CISO MODE. PREGUNTA: "${q.text}" ERROR: "${fb}". CORRIGE SEGÚN FUENTES: ${state.sourceText.substring(0,40000)}`;
+            
+            await sleep(API_DELAY_MS); // Rate limit protect
+            
             q.answer = await callGemini(p); q.status='done'; await window.saveQ(q); renderCard(c,q);
         };
 
@@ -602,7 +581,7 @@
         }
 
         async function callGemini(text, json, signal) {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${state.apiKey}`;
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${state.apiKey}`;
             const body = { contents:[{parts:[{text}]}] }; if(json) body.generationConfig={responseMimeType:"application/json"};
             const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body), signal });
             if(!r.ok) throw new Error((await r.json()).error?.message);
