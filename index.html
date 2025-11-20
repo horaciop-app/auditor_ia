@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v5.2 (Deep Flash)</title>
+    <title>INTIZA CISO AI OFFICER v5.3 (Collab Edition)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- LIBRERÍAS -->
@@ -52,7 +52,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-emerald-400">MODO CORPORATIVO</div>
-                    <div class="text-slate-400 text-[10px]">v5.2</div>
+                    <div class="text-slate-400 text-[10px]">v5.3</div>
                 </div>
             </div>
         </div>
@@ -75,13 +75,17 @@
             <p class="text-[10px] text-slate-400 mt-1 text-right">Estimado basado en el texto cargado (1M límite)</p>
         </div>
 
-        <!-- API Key (Simplified) -->
+        <!-- API Key (With Change Button) -->
         <div id="apiKeySection" class="mb-8 bg-white p-6 rounded-lg shadow-sm border border-slate-200 border-l-4 border-l-emerald-500">
             <div class="flex justify-between items-center mb-2">
                 <label class="block text-sm font-bold text-slate-700">Configuración de IA (Gemini 1.5 Flash)</label>
-                <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-xs text-blue-600 hover:underline flex items-center gap-1"><i class="fas fa-key"></i> Tu API Key</a>
+                <div>
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-xs text-blue-600 hover:underline mr-3"><i class="fas fa-key"></i> Obtener Key</a>
+                    <button onclick="resetApiKey()" class="text-xs text-red-500 hover:text-red-700 border border-red-200 px-2 py-1 rounded">Cambiar Key</button>
+                </div>
             </div>
-            <input type="password" id="apiKeyInput" placeholder="Pega tu Gemini API Key aquí..." class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 outline-none font-mono text-sm">
+            <input type="password" id="apiKeyInput" placeholder="Pega aquí la API Key de tu colega..." class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 outline-none font-mono text-sm">
+            <p class="text-[10px] text-slate-400 mt-1">Esta clave se guardará localmente. Si cambias de usuario, usa el botón "Cambiar Key".</p>
         </div>
 
         <!-- Progress Steps -->
@@ -236,8 +240,8 @@
 
     <script>
         // --- UTILS & CONFIG ---
-        const GEMINI_MODEL = "gemini-1.5-flash"; // MODELO SOLICITADO
-        const API_DELAY_MS = 4000; // 4s para rate limit
+        const GEMINI_MODEL = "gemini-1.5-flash"; // MODELO ESTABLE POR DEFECTO
+        const API_DELAY_MS = 4000; 
 
         function log(msg, type='info') {
             const box = document.getElementById('syncLog');
@@ -305,6 +309,16 @@
             
             if(window.location.protocol === 'file:') {
                  log("ERROR: Modo local file:// detectado. La sincronización no funcionará.", 'error');
+            }
+        };
+
+        // --- KEY MANAGEMENT ---
+        window.resetApiKey = function() {
+            if(confirm("¿Seguro que quieres cambiar la API Key? Esto borrará la clave actual.")) {
+                localStorage.removeItem('ciso_key');
+                state.apiKey = '';
+                getEl('apiKeyInput').value = '';
+                getEl('apiKeyInput').focus();
             }
         };
 
@@ -525,7 +539,7 @@
                 await sleep(API_DELAY_MS); 
 
                 try {
-                    // --- DEEP SEARCH PROMPT (INCLUIDO EN v5.2) ---
+                    // --- DEEP SEARCH PROMPT ---
                     const prompt = `
                         ROL: Actúa como un CISO (Chief Information Security Officer) Senior y Auditor Experto.
                         OBJETIVO: Responder la pregunta del usuario basándose EXHAUSTIVAMENTE en la documentación provista.
@@ -613,16 +627,15 @@
         };
 
         async function askGeminiWithRetry(qText, ctx, sig) {
-            // Logic for Deep Search is inside qText if ctx is empty (reproc case) 
-            // or constructed here if ctx is present (normal flow) -- BUT we construct it upstream now.
-            // So we just pass qText if ctx is empty.
-            const p = ctx ? qText : qText; 
+            // If ctx is provided, wrap it. If empty (reproc case), just send qText as is.
+            const p = ctx ? qText : qText; // Logic simplification, prompt construction is upstream
             
             let attempts = 0;
             while(attempts < 5) {
                 try {
                     return await callGemini(p, false, sig);
                 } catch(e) {
+                    // Detect Overloaded
                     if(e.message.includes('503') || e.message.includes('Overloaded')) {
                         attempts++;
                         const wait = Math.pow(2, attempts) * 2000; 
@@ -632,7 +645,7 @@
                         await sleep(wait);
                         continue;
                     }
-                    throw e; 
+                    throw e; // Throw other errors immediately
                 }
             }
             throw new Error("Servidor ocupado tras 5 intentos.");
