@@ -3,8 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v6.1 (Client Ready)</title>
+    <title>INTIZA CISO AI OFFICER v6.2 (Nuevo Look & Feel)</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        intiza: {
+                            blue: '#2563eb',
+                            light: '#ffffff',
+                            dark: '#1e40af' // Un tono más oscuro para hovers
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     
     <!-- LIBRERÍAS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -18,10 +33,10 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
-        .step-active { border-color: #059669; color: #059669; } 
+        .step-active { border-color: #2563eb; color: #2563eb; } 
         .step-inactive { border-color: #e5e7eb; color: #9ca3af; }
         .loader {
-            border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #059669;
+            border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #2563eb;
             width: 20px; height: 20px; animation: spin 1s linear infinite;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -44,15 +59,18 @@
     </script>
 
     <!-- Header -->
-    <header class="bg-slate-900 text-white p-4 shadow-lg sticky top-0 z-50">
+    <header class="bg-intiza-blue text-white p-4 shadow-lg sticky top-0 z-50">
         <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold flex items-center gap-2">
-                <i class="fas fa-user-shield text-emerald-400"></i> INTIZA CISO AI OFFICER
-            </h1>
+            <div class="flex items-center gap-2">
+                <img src="INTIZA-ISOLOGOTIPO-RGB_Color1 (1) (3).png" alt="INTIZA Logo" class="h-10">
+                <h1 class="text-xl font-bold hidden md:block">
+                    CISO AI OFFICER
+                </h1>
+            </div>
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
-                    <div class="font-bold text-emerald-400">MODO CORPORATIVO</div>
-                    <div class="text-slate-400 text-[10px]">v6.1</div>
+                    <div class="font-bold text-white">MODO CORPORATIVO</div>
+                    <div class="text-blue-200 text-[10px]">v6.2</div>
                 </div>
             </div>
         </div>
@@ -118,15 +136,15 @@
         </div>
 
         <!-- API Key -->
-        <div id="apiKeySection" class="mb-8 bg-white p-6 rounded-lg shadow-sm border border-slate-200 border-l-4 border-l-emerald-500">
+        <div id="apiKeySection" class="mb-8 bg-white p-6 rounded-lg shadow-sm border border-slate-200 border-l-4 border-l-intiza-blue">
             <div class="flex justify-between items-center mb-2">
                 <label class="block text-sm font-bold text-slate-700">Configuración de IA (Gemini 2.5 Preview)</label>
                 <div>
-                    <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-xs text-blue-600 hover:underline mr-3"><i class="fas fa-key"></i> Obtener Key</a>
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-xs text-intiza-blue hover:underline mr-3"><i class="fas fa-key"></i> Obtener Key</a>
                     <button onclick="resetApiKey()" class="text-xs text-red-500 hover:text-red-700 border border-red-200 px-2 py-1 rounded">Cambiar Key</button>
                 </div>
             </div>
-            <input type="password" id="apiKeyInput" placeholder="Pega aquí tu API Key..." class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 outline-none font-mono text-sm">
+            <input type="password" id="apiKeyInput" placeholder="Pega aquí tu API Key..." class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-intiza-blue outline-none font-mono text-sm">
         </div>
 
         <!-- Progress Steps -->
@@ -153,7 +171,7 @@
                     <span id="serverStatusBadge" class="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded border">Estado: Local</span>
                 </h2>
                 <div class="flex gap-2">
-                    <button onclick="window.debugSync()" class="text-xs bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded transition font-bold shadow-md flex items-center gap-2">
+                    <button onclick="window.debugSync()" class="text-xs bg-intiza-blue text-white hover:bg-intiza-dark px-4 py-2 rounded transition font-bold shadow-md flex items-center gap-2">
                         <i class="fas fa-sync-alt"></i> SINCRONIZAR
                     </button>
                     <button onclick="window.clearDB('documents')" class="text-xs text-red-400 hover:text-red-600 px-2 py-1 transition" title="Borrar todo">
@@ -189,12 +207,12 @@
                 </p>
             </div>
 
-            <div id="sourceProcessing" class="hidden mt-4 flex items-center justify-center text-blue-600 gap-2">
+            <div id="sourceProcessing" class="hidden mt-4 flex items-center justify-center text-intiza-blue gap-2">
                 <div class="loader"></div> <span id="procText">Procesando...</span>
             </div>
 
             <div class="mt-6 flex justify-end">
-                <button id="btnToStep2" onclick="goToStep2()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg font-medium opacity-50 cursor-not-allowed shadow-md transition-all" disabled>
+                <button id="btnToStep2" onclick="goToStep2()" class="bg-intiza-blue hover:bg-intiza-dark text-white px-6 py-2 rounded-lg font-medium opacity-50 cursor-not-allowed shadow-md transition-all" disabled>
                     Siguiente <i class="fas fa-arrow-right ml-2"></i>
                 </button>
             </div>
@@ -225,7 +243,7 @@
             <div class="mt-6 relative">
                 <div class="absolute top-0 left-0 -mt-3 ml-3 bg-white px-2 text-xs font-bold text-slate-400">O PEGAR PREGUNTAS (TEXTO PLANO)</div>
                 <textarea id="manualQuestionText" 
-                    class="w-full border border-slate-300 rounded-lg p-3 text-sm text-slate-700 focus:ring-2 focus:ring-emerald-500 outline-none resize-none scrollbar-thin" 
+                    class="w-full border border-slate-300 rounded-lg p-3 text-sm text-slate-700 focus:ring-2 focus:ring-intiza-blue outline-none resize-none scrollbar-thin" 
                     rows="5" 
                     placeholder="Pega aquí una o varias preguntas si no tienes un archivo... (Soporta múltiples líneas)"
                     oninput="checkStep2Readiness()"></textarea>
@@ -238,12 +256,12 @@
                 </h3>
                 <div id="questionsList" class="bg-slate-50 p-4 rounded border border-slate-200 max-h-60 overflow-y-auto space-y-2 text-sm scrollbar-thin"></div>
             </div>
-            <div id="extractingLoader" class="hidden mt-4 flex items-center justify-center text-blue-600 gap-2"><div class="loader"></div> Analizando...</div>
+            <div id="extractingLoader" class="hidden mt-4 flex items-center justify-center text-intiza-blue gap-2"><div class="loader"></div> Analizando...</div>
 
             <div class="mt-6 flex justify-between">
                 <button onclick="showStep(1)" class="text-slate-500 hover:text-slate-700 font-medium px-4 py-2">Atrás</button>
                 <button id="btnAnalyze" onclick="extractQuestions()" class="bg-slate-800 hover:bg-slate-900 text-white px-6 py-2 rounded-lg font-medium hidden shadow">Analizar Contenido</button>
-                <button id="btnToStep3" onclick="startQueueProcessing()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg font-medium hidden shadow-lg transform hover:-translate-y-1 transition-all">Comenzar Análisis <i class="fas fa-play ml-1"></i></button>
+                <button id="btnToStep3" onclick="startQueueProcessing()" class="bg-intiza-blue hover:bg-intiza-dark text-white px-6 py-2 rounded-lg font-medium hidden shadow-lg transform hover:-translate-y-1 transition-all">Comenzar Análisis <i class="fas fa-play ml-1"></i></button>
             </div>
         </div>
 
@@ -597,7 +615,7 @@
         function updateQuestionsUI() {
             getEl('qCount').textContent = state.questions.length;
             const l = getEl('questionsList'); l.innerHTML = '';
-            state.questions.forEach(q => l.innerHTML+=`<div class="flex gap-2 text-xs p-1 border-b"><b class="text-emerald-600 min-w-[30px]">${q.id}</b> <span>${q.text}</span></div>`);
+            state.questions.forEach(q => l.innerHTML+=`<div class="flex gap-2 text-xs p-1 border-b"><b class="text-intiza-blue min-w-[30px]">${q.id}</b> <span>${q.text}</span></div>`);
         }
 
         // --- EXECUTION ---
@@ -613,8 +631,8 @@
                 const card = getEl(`card-${q.id}`);
                 if(card) {
                     card.scrollIntoView({behavior:'smooth',block:'center'});
-                    card.classList.add('border-emerald-400','shadow-md');
-                    card.querySelector('.status-ind').innerHTML=`<i class="fas fa-circle-notch fa-spin text-emerald-500"></i> Analizando (Espera ${API_DELAY_MS/1000}s)...`;
+                    card.classList.add('border-intiza-blue','shadow-md');
+                    card.querySelector('.status-ind').innerHTML=`<i class="fas fa-circle-notch fa-spin text-intiza-blue"></i> Analizando (Espera ${API_DELAY_MS/1000}s)...`;
                 }
                 getEl('progressStats').textContent=`Analizando ID ${q.id}...`;
                 
@@ -656,7 +674,7 @@
                     
                     await window.saveQ(q);
                 }
-                if(card) card.classList.remove('border-emerald-400','shadow-md');
+                if(card) card.classList.remove('border-intiza-blue','shadow-md');
             }
             state.processing=false;
             getEl('btnStop').classList.add('hidden');
@@ -685,7 +703,7 @@
             });
         }
         function renderCard(c,q) { if(c) { c.querySelector('.status-ind').innerHTML=getIcon(q.status); c.querySelector('.ans-body').innerHTML=format(q.answer); } }
-        function getIcon(s) { return s==='done'?'<i class="fas fa-check text-emerald-500"></i>':s==='error'?'<i class="fas fa-times text-red-500"></i>':s; }
+        function getIcon(s) { return s==='done'?'<i class="fas fa-check text-intiza-blue"></i>':s==='error'?'<i class="fas fa-times text-red-500"></i>':s; }
         function toggleFb(id) { getEl(`fb-${id}`).classList.toggle('hidden'); }
         function format(t) { return t?t.replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>'):'<i class="text-slate-300">Pendiente...</i>'; }
 
