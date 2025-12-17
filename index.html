@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v8.0 (Smart Connect)</title>
+    <title>INTIZA CISO AI OFFICER v8.1 (Smart Fix)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -76,7 +76,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-white opacity-90">MODO CORPORATIVO</div>
-                    <div class="text-blue-200 text-[10px]">v8.0</div>
+                    <div class="text-blue-200 text-[10px]">v8.1 Fix</div>
                 </div>
             </div>
         </div>
@@ -676,22 +676,39 @@
 
                 if(!txt.trim()) throw new Error("No hay texto.");
 
-                const prompt = `ACTÚA COMO CISO. Extrae preguntas en JSON: [{"id":"1","text":"Pregunta"}]. Respeta IDs originales. TEXTO: ${txt.substring(0,50000)}`;
+                // FIX: Added 'MAXIMO 50 items' to prevent overflow
+                const prompt = `ACTÚA COMO CISO. Extrae preguntas en JSON: [{"id":"1","text":"Pregunta"}]. Respeta IDs originales. MAXIMO 50 items. TEXTO: ${txt.substring(0,50000)}`;
                 
                 trackRequest(Math.ceil(prompt.length/4));
                 const res = await callGemini(prompt, true);
                 
-                // REPARACIÓN DE JSON
+                // REPARACIÓN DE JSON MEJORADA
                 let cleanJson = res.replace(/```json|```/g, '').trim();
-                const first = cleanJson.indexOf('['); const last = cleanJson.lastIndexOf(']');
-                if(first !== -1 && last !== -1) cleanJson = cleanJson.substring(first, last+1);
+                const first = cleanJson.indexOf('['); 
+                // We don't just look for last ']', we look for a valid structure end if possible
+                if(first !== -1) cleanJson = cleanJson.substring(first);
                 
                 let qs;
-                try { qs = JSON.parse(cleanJson); } 
-                catch(e) { 
-                    if(!cleanJson.endsWith(']')) cleanJson += ']'; 
-                    if(!cleanJson.endsWith('}]')) cleanJson += '}]';
+                try { 
                     qs = JSON.parse(cleanJson); 
+                } 
+                catch(e) { 
+                    // Fallback inteligente: Buscar el último objeto cerrado "}," o "}"
+                    const lastClosingObj = cleanJson.lastIndexOf('}');
+                    if (lastClosingObj !== -1) {
+                        // Cortamos hasta el último objeto válido y cerramos el array
+                        let salvagedJson = cleanJson.substring(0, lastClosingObj + 1) + ']';
+                        try {
+                            qs = JSON.parse(salvagedJson);
+                            console.warn("JSON reparado por truncamiento. Se perdieron items finales.");
+                        } catch(e2) {
+                            // Intento final desesperado
+                            if(!cleanJson.endsWith(']')) cleanJson += ']'; 
+                            qs = JSON.parse(cleanJson);
+                        }
+                    } else {
+                        throw new Error("No se pudo analizar el JSON de preguntas.");
+                    }
                 }
 
                 qs = qs.map(q=>({...q, status:'pending', attempts:0}));
@@ -702,7 +719,11 @@
                 getEl('extractingLoader').classList.add('hidden');
                 getEl('questionsListArea').classList.remove('hidden');
                 getEl('btnToStep3').classList.remove('hidden');
-            } catch(e) { alert(e.message); getEl('extractingLoader').classList.add('hidden'); getEl('btnAnalyze').classList.remove('hidden'); }
+            } catch(e) { 
+                alert("Error al extraer preguntas: " + e.message + "\nIntenta reducir la cantidad de texto o archivos."); 
+                getEl('extractingLoader').classList.add('hidden'); 
+                getEl('btnAnalyze').classList.remove('hidden'); 
+            }
         }
 
         function updateQuestionsUI() {
