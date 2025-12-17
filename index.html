@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v7.4 (Smart Auto-Detect)</title>
+    <title>INTIZA CISO AI OFFICER v6.9.3 (JSON Repair)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -52,12 +52,10 @@
     <div id="globalError"></div>
     <script>
         window.onerror = function(msg, url, line) {
-            if (msg.includes('extension') || msg.includes('null')) return;
+            if(msg.includes('ResizeObserver')) return; // Ignorar errores benignos de UI
             const div = document.getElementById('globalError');
-            if(div) {
-                div.style.display = 'block';
-                div.innerText = `Error JS Detectado: ${msg} (Línea ${line})`;
-            }
+            div.style.display = 'block';
+            div.innerText = `Error Detectado: ${msg} (Línea ${line})`;
         };
     </script>
 
@@ -78,7 +76,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-white opacity-90">MODO CORPORATIVO</div>
-                    <div class="text-blue-200 text-[10px]">v7.4</div>
+                    <div class="text-blue-200 text-[10px]">v6.9.3</div>
                 </div>
             </div>
         </div>
@@ -92,56 +90,60 @@
             <h3 class="text-xs font-bold text-slate-400 uppercase mb-3 tracking-wider flex items-center gap-2">
                 <i class="fas fa-chart-line"></i> Monitor de Rendimiento API
             </h3>
+
             <div class="grid grid-cols-3 gap-4">
                 <!-- RPM -->
                 <div>
-                    <div class="text-[10px] font-bold text-slate-500 uppercase flex justify-between"><span>Peticiones / Min</span><i class="fas fa-tachometer-alt text-blue-400"></i></div>
-                    <div class="text-sm font-mono font-bold text-slate-700 mt-1"><span id="rpmVal" class="text-blue-600">0</span> / <span class="text-slate-400">2000</span></div>
-                    <div class="w-full bg-slate-100 h-1.5 rounded-full mt-1"><div id="rpmBar" class="bg-blue-500 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div></div>
+                    <div class="text-[10px] font-bold text-slate-500 uppercase flex justify-between">
+                        <span>Peticiones / Min</span>
+                        <i class="fas fa-tachometer-alt text-blue-400"></i>
+                    </div>
+                    <div class="text-sm font-mono font-bold text-slate-700 mt-1">
+                        <span id="rpmVal" class="text-blue-600">0</span> / <span class="text-slate-400">10</span>
+                    </div>
+                    <div class="w-full bg-slate-100 h-1.5 rounded-full mt-1">
+                        <div id="rpmBar" class="bg-blue-500 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
                 </div>
+                
                 <!-- TPM -->
                 <div>
-                    <div class="text-[10px] font-bold text-slate-500 uppercase flex justify-between"><span>Tokens / Min</span><i class="fas fa-bolt text-purple-400"></i></div>
-                    <div class="text-sm font-mono font-bold text-slate-700 mt-1"><span id="tpmVal" class="text-purple-600">0</span> / <span class="text-slate-400">4M</span></div>
-                    <div class="w-full bg-slate-100 h-1.5 rounded-full mt-1"><div id="tpmBar" class="bg-purple-500 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div></div>
+                    <div class="text-[10px] font-bold text-slate-500 uppercase flex justify-between">
+                        <span>Tokens / Min</span>
+                        <i class="fas fa-bolt text-purple-400"></i>
+                    </div>
+                    <div class="text-sm font-mono font-bold text-slate-700 mt-1">
+                        <span id="tpmVal" class="text-purple-600">0</span> / <span class="text-slate-400">1M</span>
+                    </div>
+                    <div class="w-full bg-slate-100 h-1.5 rounded-full mt-1">
+                        <div id="tpmBar" class="bg-purple-500 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
                 </div>
+
                 <!-- Timer -->
                 <div>
-                    <div class="text-[10px] font-bold text-slate-500 uppercase flex justify-between"><span>Estado</span><i class="fas fa-check-circle text-green-500"></i></div>
-                    <div class="text-sm font-mono font-bold text-green-600 mt-1" id="resetTimer">Óptimo</div>
+                    <div class="text-[10px] font-bold text-slate-500 uppercase flex justify-between">
+                        <span>Restitución</span>
+                        <i class="fas fa-hourglass-half text-orange-400"></i>
+                    </div>
+                    <div class="text-sm font-mono font-bold text-orange-600 mt-1" id="resetTimer">
+                        0s
+                    </div>
+                    <div class="text-[9px] text-slate-400 leading-tight mt-0.5">Para liberar carga</div>
                 </div>
             </div>
         </div>
 
-        <!-- API Key & Auto-Detect -->
+        <!-- API Key -->
         <div id="apiKeySection" class="mb-8 bg-white p-6 rounded-lg shadow-sm border border-slate-200 border-l-4 border-l-intiza-blue">
             <div class="flex justify-between items-center mb-2">
-                <label class="block text-sm font-bold text-slate-700">Configuración de IA</label>
+                <label class="block text-sm font-bold text-slate-700">Configuración de IA (Gemini 2.5 Preview)</label>
                 <div>
                     <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-xs text-intiza-blue hover:underline mr-3"><i class="fas fa-key"></i> Obtener Key</a>
-                    <button onclick="resetApiKey()" class="text-xs text-red-500 hover:text-red-700 border border-red-200 px-2 py-1 rounded">Cambiar</button>
+                    <button onclick="resetApiKey()" class="text-xs text-red-500 hover:text-red-700 border border-red-200 px-2 py-1 rounded">Cambiar Key</button>
                 </div>
             </div>
-            
-            <div class="flex flex-col sm:flex-row gap-3">
-                <input type="password" id="apiKeyInput" placeholder="Pega aquí tu API Key..." class="flex-1 p-2 border border-slate-300 rounded focus:ring-2 focus:ring-intiza-blue outline-none font-mono text-sm">
-                
-                <button id="btnAutoConnect" onclick="startAutoDetection()" class="w-full sm:w-auto bg-intiza-blue hover:bg-intiza-dark text-white px-4 py-2 rounded font-bold text-sm shadow flex items-center justify-center gap-2 transition-all">
-                    <i class="fas fa-magic"></i> Conexión Inteligente
-                </button>
-            </div>
-            
-            <!-- Connection Status Log -->
-            <div id="connectionStatus" class="hidden mt-3 p-2 bg-slate-50 border border-slate-200 rounded text-xs font-mono text-slate-600">
-                <div class="flex items-center gap-2">
-                    <div class="loader w-3 h-3 border-2" id="detectLoader"></div>
-                    <span id="detectMsg">Analizando capacidades de tu licencia...</span>
-                </div>
-            </div>
-            
-            <p id="activeModelBadge" class="hidden mt-2 text-xs font-bold text-green-600 bg-green-50 p-1.5 rounded border border-green-100 inline-block">
-                <i class="fas fa-check-circle"></i> Usando motor: <span id="modelNameDisplay">...</span>
-            </p>
+            <input type="password" id="apiKeyInput" placeholder="Pega aquí tu API Key..." class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-intiza-blue outline-none font-mono text-sm">
         </div>
 
         <!-- Progress Steps -->
@@ -304,19 +306,12 @@
 
     <script>
         // --- UTILS & CONFIG ---
-        // LISTA DE CANDIDATOS PARA AUTO-DETECCIÓN
-        const MODEL_CANDIDATES = [
-            "gemini-1.5-flash",        // Prioridad 1: Estándar (Pago)
-            "gemini-1.5-flash-001",    // Prioridad 2: Versión fija
-            "gemini-1.5-flash-002",    // Prioridad 3: Nueva versión
-            "gemini-2.0-flash-exp",    // Prioridad 4: Experimental (Free)
-            "gemini-1.5-pro",          // Prioridad 5: Pro
-            "gemini-2.5-flash-preview-09-2025" // Fallback último recurso
-        ];
+        const GEMINI_MODEL = "gemini-2.5-flash-preview-09-2025"; 
+        const API_DELAY_MS = 6000; 
         
-        const API_DELAY_MS = 1000; // Turbo delay por defecto (ajustable)
-        const RPM_LIMIT = 2000; 
-        const TPM_LIMIT = 4000000; 
+        // --- LIMITS CONSTANTS ---
+        const RPM_LIMIT = 10; 
+        const TPM_LIMIT = 1000000; 
         const WINDOW_MS = 60000; 
 
         function log(msg, type='info') {
@@ -367,124 +362,9 @@
         window.clearDB = async function(store) { if(confirm("¿Borrar datos?")) { await dbOp('readwrite', store, s => s.clear()); window.location.reload(); } };
 
         // --- STATE ---
-        let state = { 
-            apiKey: localStorage.getItem('ciso_key')||'', 
-            sourceText:'', 
-            questions:[], 
-            abort:null, 
-            processing:false, 
-            requestLog: [],
-            model: localStorage.getItem('ciso_active_model') || '' // Start empty if not saved
-        };
+        let state = { apiKey: localStorage.getItem('ciso_key')||'', sourceText:'', questions:[], abort:null, processing:false, requestLog: [] };
 
-        // --- AUTO-DETECT LOGIC ---
-        window.startAutoDetection = async function() {
-            const key = getEl('apiKeyInput').value.trim();
-            if(!key) return alert("Por favor ingresa tu API Key primero.");
-            
-            state.apiKey = key;
-            localStorage.setItem('ciso_key', key);
-
-            // UI Feedback
-            const statusBox = getEl('connectionStatus');
-            const loader = getEl('detectLoader');
-            const msg = getEl('detectMsg');
-            const btn = getEl('btnAutoConnect');
-            
-            statusBox.classList.remove('hidden');
-            loader.classList.remove('hidden');
-            msg.textContent = "Probando modelos disponibles...";
-            msg.className = "text-slate-600";
-            btn.disabled = true;
-            btn.classList.add('opacity-50');
-
-            // Try models sequentially
-            let foundModel = null;
-            
-            for (const model of MODEL_CANDIDATES) {
-                msg.textContent = `Probando: ${model}...`;
-                const works = await testModelConnection(key, model);
-                if (works) {
-                    foundModel = model;
-                    break;
-                }
-            }
-
-            if (foundModel) {
-                // SUCCESS
-                state.model = foundModel;
-                localStorage.setItem('ciso_active_model', foundModel);
-                
-                msg.textContent = "¡Conexión Exitosa!";
-                msg.className = "text-green-600 font-bold";
-                loader.classList.add('hidden');
-                
-                getEl('activeModelBadge').classList.remove('hidden');
-                getEl('modelNameDisplay').textContent = foundModel;
-                
-                setTimeout(() => statusBox.classList.add('hidden'), 3000);
-            } else {
-                // FAIL ALL
-                msg.textContent = "Error: Ningún modelo compatible con tu API Key.";
-                msg.className = "text-red-500 font-bold";
-                loader.classList.add('hidden');
-            }
-            
-            btn.disabled = false;
-            btn.classList.remove('opacity-50');
-        };
-
-        async function testModelConnection(key, modelName) {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${key}`;
-            const body = { contents: [{ parts: [{ text: "Ping" }] }] };
-            try {
-                const r = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
-                if (r.ok) return true;
-                return false;
-            } catch (e) {
-                return false;
-            }
-        }
-
-        // --- INIT ---
-        window.onload = async function() {
-            if(state.apiKey) {
-                getEl('apiKeyInput').value = state.apiKey;
-                // If we have a saved model, show badge
-                if(state.model) {
-                    getEl('activeModelBadge').classList.remove('hidden');
-                    getEl('modelNameDisplay').textContent = state.model;
-                }
-            }
-            
-            await refreshDocsUI();
-            
-            const qs = await window.loadQs();
-            if(qs.length > 0) {
-                state.questions = qs.sort((a,b) => a.id.localeCompare(b.id, undefined, {numeric: true}));
-                updateQuestionsUI(); renderResultsUI(); enableStep(3);
-                const pending = state.questions.filter(q => q.status === 'pending');
-                if(pending.length > 0) getEl('btnResume').classList.remove('hidden');
-                updateCounterUI();
-            }
-            
-            setInterval(updateMonitorUI, 1000);
-        };
-
-        // --- KEY MANAGEMENT ---
-        window.resetApiKey = function() {
-            if(confirm("¿Cambiar API Key?")) {
-                localStorage.removeItem('ciso_key');
-                localStorage.removeItem('ciso_active_model');
-                state.apiKey = '';
-                state.model = '';
-                getEl('apiKeyInput').value = '';
-                getEl('activeModelBadge').classList.add('hidden');
-                getEl('apiKeyInput').focus();
-            }
-        };
-
-        // --- RATE MONITOR ---
+        // --- RATE MONITOR LOGIC ---
         function trackRequest(tokens) {
             const now = Date.now();
             state.requestLog.push({ time: now, tokens: tokens });
@@ -497,57 +377,129 @@
             const rpm = state.requestLog.length;
             const tpm = state.requestLog.reduce((acc, req) => acc + req.tokens, 0);
             
-            const rpmEl = getEl('rpmVal'); if(rpmEl) rpmEl.textContent = rpm;
-            const rpmBar = getEl('rpmBar'); 
-            if(rpmBar) rpmBar.style.width = `${Math.min((rpm/RPM_LIMIT)*100, 100)}%`;
+            let timeToFree = 0;
+            if (state.requestLog.length > 0) {
+                const oldest = state.requestLog[0].time;
+                timeToFree = Math.max(0, Math.ceil((WINDOW_MS - (now - oldest)) / 1000));
+            }
 
-            const tpmEl = getEl('tpmVal'); if(tpmEl) tpmEl.textContent = tpm.toLocaleString();
+            const rpmEl = getEl('rpmVal');
+            if (rpmEl) rpmEl.textContent = rpm;
+            
+            const rpmBar = getEl('rpmBar');
+            if (rpmBar) {
+                rpmBar.style.width = `${Math.min((rpm/RPM_LIMIT)*100, 100)}%`;
+                if(rpm > RPM_LIMIT*0.8) rpmBar.className = "bg-red-500 h-1.5 rounded-full transition-all duration-300";
+                else rpmBar.className = "bg-blue-500 h-1.5 rounded-full transition-all duration-300";
+            }
+
+            const tpmEl = getEl('tpmVal');
+            if (tpmEl) tpmEl.textContent = tpm.toLocaleString();
+            
             const tpmBar = getEl('tpmBar');
-            if(tpmBar) tpmBar.style.width = `${Math.min((tpm/TPM_LIMIT)*100, 100)}%`;
+            if (tpmBar) tpmBar.style.width = `${Math.min((tpm/TPM_LIMIT)*100, 100)}%`;
+
+            const resetTimer = getEl('resetTimer');
+            if (resetTimer) {
+                resetTimer.textContent = timeToFree + "s";
+                if(timeToFree > 0) resetTimer.className = "text-lg font-mono font-bold text-orange-600 mt-1";
+                else resetTimer.className = "text-lg font-mono font-bold text-green-600 mt-1";
+            }
         }
+        setInterval(updateMonitorUI, 1000);
+
+        // --- INIT ---
+        window.onload = async function() {
+            if(state.apiKey) getEl('apiKeyInput').value = state.apiKey;
+            await refreshDocsUI();
+            
+            const qs = await window.loadQs();
+            if(qs.length > 0) {
+                state.questions = qs.sort((a,b) => a.id.localeCompare(b.id, undefined, {numeric: true}));
+                updateQuestionsUI(); renderResultsUI(); enableStep(3);
+                const pending = state.questions.filter(q => q.status === 'pending');
+                if(pending.length > 0) getEl('btnResume').classList.remove('hidden');
+                updateCounterUI();
+            }
+            
+            if(window.location.protocol === 'file:') {
+                 log("ERROR: Modo local file:// detectado. La sincronización no funcionará.", 'error');
+            }
+        };
+
+        // --- KEY MANAGEMENT ---
+        window.resetApiKey = function() {
+            if(confirm("¿Seguro que quieres cambiar la API Key? Esto borrará la clave actual.")) {
+                localStorage.removeItem('ciso_key');
+                state.apiKey = '';
+                getEl('apiKeyInput').value = '';
+                getEl('apiKeyInput').focus();
+            }
+        };
 
         // --- SYNC FUNCTION ---
         window.debugSync = async function() {
             const loader = getEl('syncLoader');
             const area = getEl('syncArea');
+            const title = getEl('syncTitle');
             const logBox = getEl('syncLog');
+            
             area.classList.remove('hidden');
             loader.classList.remove('hidden');
             logBox.innerHTML = ''; 
+            title.textContent = "Sincronizando...";
+            log("Iniciando proceso...");
 
             if (window.location.protocol === 'file:') {
-                alert("Error: Sincronización requiere HTTP/HTTPS (no file://).");
+                log("ERROR FATAL: Protocolo file:// no soportado.", 'error');
                 loader.classList.add('hidden');
                 return;
             }
 
             try {
+                log("Leyendo manifest.json...");
                 const manifestRes = await fetch('manifest.json?t=' + new Date().getTime());
-                if(!manifestRes.ok) throw new Error("No se encontró manifest.json");
-                const files = await manifestRes.json();
+                
+                if(manifestRes.status === 404) throw new Error("No se encontró 'manifest.json'.");
+                if(!manifestRes.ok) throw new Error(`Error HTTP ${manifestRes.status}`);
+                
+                let files;
+                try { files = await manifestRes.json(); } catch(e) { throw new Error("JSON corrupto en manifest."); }
+                
+                if(!Array.isArray(files)) throw new Error("Formato inválido en manifest.");
+                log(`Manifest OK. ${files.length} archivos.`, 'success');
 
                 let count = 0;
                 for(const fileName of files) {
-                    log(`Descargando: ${fileName}...`);
+                    log(`Bajando: ${fileName}...`);
                     const safeName = encodeURIComponent(fileName);
                     const fRes = await fetch(`fuentes/${safeName}`);
                     
-                    if(!fRes.ok) { log(`Error ${fRes.status}: ${fileName}`, 'error'); continue; }
+                    if(!fRes.ok) {
+                        log(`Error ${fRes.status} en ${fileName}`, 'error');
+                        continue;
+                    }
 
                     const blob = await fRes.blob();
+                    log(`Procesando ${fileName}...`);
+                    
                     let text = "";
-                    const lower = fileName.toLowerCase();
-                    if(lower.endsWith('.pdf')) text = await extractTextFromPDF(blob);
-                    else if(lower.endsWith('.docx')) text = await extractTextFromDOCX(blob);
+                    const lowerName = fileName.toLowerCase();
+                    if(lowerName.endsWith('.pdf')) text = await extractTextFromPDF(blob);
+                    else if(lowerName.endsWith('.docx')) text = await extractTextFromDOCX(blob);
                     else text = await extractTextFromPDF(blob); 
                     
                     await window.saveDoc(fileName, text, 'server');
+                    log(`OK: ${fileName}`, 'success');
                     count++;
                 }
-                log(`Completado. ${count} archivos.`, 'success');
+
+                log(`FIN. ${count} archivos guardados.`, 'success');
                 await refreshDocsUI();
-                setTimeout(() => area.classList.add('hidden'), 3000);
+                setTimeout(() => area.classList.add('hidden'), 5000);
+
             } catch(e) {
+                log(`ERROR CRÍTICO: ${e.message}`, 'error');
                 alert("Error Sync: " + e.message);
             } finally {
                 loader.classList.add('hidden');
@@ -561,18 +513,20 @@
             
             if(docs.length > 0) {
                 state.sourceText = docs.map(d => `\n=== DOC (${d.source}): ${d.name} ===\n${d.content}`).join('\n');
-                getEl('storageSize').textContent = docs.length + " Docs";
                 
                 list.innerHTML = '';
                 docs.forEach(d => {
-                    list.innerHTML += `<li class="p-2 text-sm border-b flex justify-between"><span class="text-green-500 font-bold">${d.name}</span> <span class="text-xs text-gray-400 uppercase">${d.source}</span></li>`;
+                    const color = d.source === 'server' ? 'text-purple-500' : 'text-green-500';
+                    list.innerHTML += `<li class="p-2 text-sm border-b flex justify-between"><span class="${color} font-bold">${d.name}</span> <span class="text-xs text-gray-400 uppercase">${d.source}</span></li>`;
                 });
 
                 getEl('btnToStep2').disabled = false;
                 getEl('btnToStep2').classList.remove('opacity-50', 'cursor-not-allowed');
                 enableStep(2);
-                badge.textContent = "Conectado";
-                badge.className = "text-[10px] bg-purple-100 text-purple-600 px-2 py-1 rounded border font-bold";
+                
+                const hasServer = docs.some(d => d.source === 'server');
+                badge.textContent = hasServer ? "Conectado" : "Local";
+                badge.className = hasServer ? "text-[10px] bg-purple-100 text-purple-600 px-2 py-1 rounded border font-bold" : "text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded border";
             }
         }
 
@@ -591,20 +545,27 @@
 
         // --- UI HANDLERS ---
         function goToStep2() {
-            if(!state.apiKey) return alert("Configura la IA primero.");
-            showStep(2);
+            const k = getEl('apiKeyInput').value.trim();
+            if(!k) return alert("Falta API Key");
+            localStorage.setItem('ciso_key', k); state.apiKey = k; showStep(2);
         }
 
         window.checkStep2Readiness = function() {
             const files = getEl('questionFiles').files;
             const text = getEl('manualQuestionText').value.trim();
-            const hasFiles = files.length > 0;
             
-            getEl('selectedQuestionsFiles').textContent = hasFiles ? Array.from(files).map(x=>x.name).join(', ') : '';
-            getEl('selectedQuestionsFiles').className = hasFiles ? "mt-2 text-xs text-slate-500 font-mono text-center" : "hidden";
-            
-            if(hasFiles || text.length > 0) getEl('btnAnalyze').classList.remove('hidden');
-            else getEl('btnAnalyze').classList.add('hidden');
+            if(files.length > 0) {
+                getEl('selectedQuestionsFiles').textContent = Array.from(files).map(x=>x.name).join(', ');
+                getEl('selectedQuestionsFiles').classList.remove('hidden');
+            } else {
+                getEl('selectedQuestionsFiles').classList.add('hidden');
+            }
+
+            if(files.length > 0 || text.length > 0) {
+                getEl('btnAnalyze').classList.remove('hidden');
+            } else {
+                getEl('btnAnalyze').classList.add('hidden');
+            }
         };
 
         async function extractQuestions() {
@@ -616,6 +577,7 @@
             
             try {
                 let txt = "";
+                
                 for(const f of files) {
                     const ext = f.name.split('.').pop().toLowerCase();
                     if(ext==='pdf') txt += await extractTextFromPDF(f);
@@ -624,15 +586,48 @@
                 }
                 if(manualText) txt += `\n\n--- PREGUNTAS MANUALES ---\n${manualText}\n\n`;
 
-                if(!txt.trim()) throw new Error("No hay texto.");
+                if(!txt.trim()) throw new Error("No se encontró texto para analizar.");
 
-                const prompt = `ACTÚA COMO CISO. Extrae preguntas en JSON: [{"id":"1","text":"Pregunta"}]. Respeta IDs originales. TEXTO: ${txt.substring(0,50000)}`;
+                // PROMPT CORREGIDO PARA ROL CISO Y CONSERVACIÓN DE IDs
+                const prompt = `
+                    ACTÚA COMO UN CISO EXPERTO EN AUDITORÍA. 
+                    Analiza el siguiente texto (que puede ser un cuestionario desordenado) y extrae una lista estructurada de preguntas, controles o requerimientos.
+
+                    REGLA DE ORO SOBRE LOS IDs:
+                    - Conserva EXACTAMENTE la numeración o código original que aparece en el texto (ej: "1.1.2", "A.9.1", "Q23", "REQ-05"). 
+                    - NO inventes una numeración secuencial (1, 2, 3...) si ya existe una en el documento. Esto es vital para la trazabilidad.
+                    - Si no hay numeración visible, entonces sí usa 1, 2, 3...
+
+                    Devuelve SOLO un array JSON válido: [{"id":"ID_ORIGINAL", "text":"Texto completo de la pregunta"}]
+
+                    TEXTO A ANALIZAR: 
+                    ${txt.substring(0,50000)}
+                `;
                 
                 trackRequest(Math.ceil(prompt.length/4));
                 const res = await callGemini(prompt, true);
                 
-                const cleanJson = res.replace(new RegExp('```json|```', 'g'), '').trim();
-                const qs = JSON.parse(cleanJson).map(q=>({...q, status:'pending', attempts:0}));
+                // MEJORA: Sanitización de JSON más robusta para evitar "Unterminated string"
+                let cleanJson = res.replace(/```json|```/g, '').trim();
+                // Encuentra el primer [ y el último ]
+                const firstBracket = cleanJson.indexOf('[');
+                const lastBracket = cleanJson.lastIndexOf(']');
+                if (firstBracket !== -1 && lastBracket !== -1) {
+                    cleanJson = cleanJson.substring(firstBracket, lastBracket + 1);
+                }
+                
+                let qs;
+                try {
+                    qs = JSON.parse(cleanJson);
+                } catch (e) {
+                     // Intento de reparación simple si falla por corte
+                    console.warn("JSON roto, intentando reparar cierre...");
+                    if (!cleanJson.endsWith(']')) cleanJson += ']';
+                    if (!cleanJson.endsWith('}]')) cleanJson += '}]';
+                    qs = JSON.parse(cleanJson);
+                }
+
+                qs = qs.map(q=>({...q, status:'pending', attempts:0}));
                 
                 await dbOp('readwrite', STORE_QUESTIONS, s => s.clear());
                 for(const q of qs) await window.saveQ(q);
@@ -641,7 +636,7 @@
                 getEl('extractingLoader').classList.add('hidden');
                 getEl('questionsListArea').classList.remove('hidden');
                 getEl('btnToStep3').classList.remove('hidden');
-            } catch(e) { alert(e.message); getEl('extractingLoader').classList.add('hidden'); getEl('btnAnalyze').classList.remove('hidden'); }
+            } catch(e) { alert("Error al leer preguntas: " + e.message); console.error(e); getEl('extractingLoader').classList.add('hidden'); getEl('btnAnalyze').classList.remove('hidden'); }
         }
 
         function updateQuestionsUI() {
@@ -650,6 +645,13 @@
             state.questions.forEach(q => l.innerHTML+=`<div class="flex gap-2 text-xs p-1 border-b"><b class="text-intiza-blue min-w-[30px]">${q.id}</b> <span>${q.text}</span></div>`);
         }
         
+        function updateCounterUI() {
+             const total = state.questions.length;
+             const done = state.questions.filter(q => q.status === 'done').length;
+             const counter = document.getElementById('qCounterDisplay');
+             if(counter) counter.textContent = `${done} / ${total}`;
+        }
+
         // --- EXECUTION ---
         async function startQueueProcessing() {
             showStep(3); state.processing=true; state.abort=new AbortController();
@@ -672,11 +674,26 @@
                 await sleep(API_DELAY_MS); 
 
                 try {
+                    // --- PROMPT CISO DEFINITIVO + DEEP SEARCH + 20 SENTENCES LIMIT + BOLD ---
                     const prompt = `
-                        ROL: CISO de INTIZA. Responde Due Diligence.
-                        INSTRUCCIONES: Búsqueda Profunda en todos los docs. Prioriza específicos.
-                        FORMATO: Español. Máx 20 oraciones. Cita fuentes en **negrita**.
-                        CONTEXTO: """${state.sourceText.substring(0, 1000000)}"""
+                        ROL: Actúa como el **CISO de INTIZA**. Estás respondiendo un cuestionario de **Due Diligence** o Auditoría de Seguridad de un **Cliente Corporativo**. 
+                        Tu objetivo es transmitir confianza, profesionalismo y solvencia técnica.
+                        
+                        INSTRUCCIONES DE BÚSQUEDA (Deep Search):
+                        1. NO te quedes con la primera coincidencia. Muchos temas se mencionan en una "Política" general pero se detallan en un "Procedimiento" técnico.
+                        2. Lee TODOS los documentos del contexto.
+                        3. Si encuentras una contradicción, prioriza el documento más específico o reciente.
+                        
+                        FORMATO DE RESPUESTA:
+                        - Respuesta en ESPAÑOL, precisa y directa.
+                        - LÍMITE DE LONGITUD: Máximo 20 oraciones. Sé conciso pero riguroso.
+                        - Justifica CADA afirmación citando la fuente: "Según la Política [Nombre], sección [X]...".
+                        - IMPORTANTE: Pon el nombre del documento y la sección siempre en **negrita** (usando asteriscos dobles).
+                        - Evita ser evasivo; usa terminología estándar (ISO 27001, NIST).
+                        
+                        CONTEXTO (Fuentes): 
+                        """${state.sourceText.substring(0, 1000000)}"""
+                        
                         PREGUNTA: "${q.text}"
                     `;
                     
@@ -684,13 +701,20 @@
                     const ans = await askGeminiWithRetry(prompt, "", state.abort.signal);
                     
                     q.status='done'; q.answer=ans; 
-                    await window.saveQ(q); renderCard(card,q); updateCounterUI();
+                    await window.saveQ(q); 
+                    renderCard(card,q);
+                    updateCounterUI();
+                    
                 } catch(e) {
                     if(e.name==='AbortError') break;
                     q.attempts++;
-                    q.status='error'; q.answer="Error: "+e.message; 
+                    
+                    q.status='error'; 
+                    q.answer="Error: "+e.message; 
                     if(card) card.classList.add('border-red-500'); 
-                    await window.saveQ(q); updateCounterUI();
+                    
+                    await window.saveQ(q);
+                    updateCounterUI();
                 }
                 if(card) card.classList.remove('border-intiza-blue','shadow-md');
             }
@@ -702,6 +726,7 @@
 
         function stopProcessing() { if(state.abort) state.abort.abort(); state.processing=false; }
 
+        // --- RENDERING ---
         function renderResultsUI() {
             const c = getEl('resultsContainer'); c.innerHTML = '';
             state.questions.forEach(q => {
@@ -729,36 +754,54 @@
             const fb = getEl(`tx-${id}`).value; const q = state.questions.find(x=>x.id===id);
             getEl(`fb-${id}`).classList.add('hidden');
             const c = getEl(`card-${id}`); c.querySelector('.ans-body').innerHTML='<i class="fas fa-spin fa-sync"></i>';
-            const p = `CISO MODE. PREGUNTA: "${q.text}" ERROR: "${fb}". CORRIGE: ${state.sourceText.substring(0,40000)}`;
+            
+            const p = `ROL: CISO Senior. TAREA: Corregir respuesta anterior. PREGUNTA: "${q.text}" ERROR REPORTADO: "${fb}". INSTRUCCIÓN: Revisa exhaustivamente TODAS las fuentes nuevamente. LÍMITE: Máximo 20 oraciones. FORMATO: Usa **negrita** para citar nombres de documentos y secciones. FUENTES: ${state.sourceText.substring(0,1000000)}`;
+            
+            trackRequest(Math.ceil(p.length/4));
+            await sleep(API_DELAY_MS); 
+            
             try {
                  q.answer = await askGeminiWithRetry(p, "", null); 
-                 q.status='done'; await window.saveQ(q); renderCard(c,q); updateCounterUI();
-            } catch(e) { alert(e.message); }
+                 q.status='done'; 
+                 await window.saveQ(q); 
+                 renderCard(c,q);
+                 updateCounterUI();
+            } catch(e) {
+                alert(e.message);
+            }
         };
 
         async function askGeminiWithRetry(qText, ctx, sig) {
             const p = ctx ? qText : qText; 
             let attempts = 0;
-            while(attempts < 3) {
+            while(attempts < 5) {
                 try {
                     return await callGemini(p, false, sig);
                 } catch(e) {
                     if(e.message.includes('503') || e.message.includes('Overloaded')) {
-                        attempts++; await sleep(2000*attempts); continue;
+                        attempts++;
+                        const wait = Math.pow(2, attempts) * 2000; 
+                        console.warn(`Saturado. Reintento en ${wait/1000}s...`);
+                        const prog = getEl('progressStats');
+                        if(prog) prog.textContent = `Saturado. Esperando ${wait/1000}s...`;
+                        await sleep(wait);
+                        continue;
                     }
                     throw e; 
                 }
             }
-            throw new Error("Servidor ocupado.");
+            throw new Error("Servidor ocupado tras 5 intentos.");
         }
 
         async function callGemini(text, json, signal) {
-            // USAR EL MODELO DETECTADO O POR DEFECTO
-            const activeModel = state.model || "gemini-1.5-flash";
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${state.apiKey}`;
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${state.apiKey}`;
             const body = { contents:[{parts:[{text}]}] }; if(json) body.generationConfig={responseMimeType:"application/json"};
             const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body), signal });
-            if(!r.ok) { const err = await r.json(); throw new Error(err.error?.message || r.statusText); }
+            
+            if(!r.ok) {
+                const err = await r.json();
+                throw new Error(err.error?.message || r.statusText);
+            }
             return (await r.json()).candidates[0].content.parts[0].text;
         }
 
