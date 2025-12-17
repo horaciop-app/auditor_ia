@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v6.9.2 (Robust Fix)</title>
+    <title>INTIZA CISO AI OFFICER v7.1 (Enterprise Turbo)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -52,7 +52,7 @@
     <div id="globalError"></div>
     <script>
         window.onerror = function(msg, url, line) {
-            // Ignorar errores benignos de extensiones o nulos temporales ya manejados
+            // Ignorar errores benignos
             if (msg.includes('extension') || msg.includes('null')) return;
             const div = document.getElementById('globalError');
             if(div) {
@@ -66,10 +66,7 @@
     <header class="bg-intiza-blue text-white p-4 shadow-lg sticky top-0 z-50">
         <div class="container mx-auto flex justify-between items-center">
             <div class="flex items-center gap-3">
-                <!-- LOGO CON FALLBACK AUTOMÁTICO -->
                 <img src="INTIZA-ISOLOGOTIPO.png" alt="INTIZA Logo" class="h-10 bg-white rounded p-1" onerror="this.style.display='none'; document.getElementById('logo-fallback').classList.remove('hidden');">
-                
-                <!-- Fallback (oculto por defecto) -->
                 <div id="logo-fallback" class="hidden flex items-center gap-2 bg-white text-intiza-blue px-2 py-1 rounded font-bold text-lg shadow-sm">
                     <i class="fas fa-shield-alt"></i> INTIZA
                 </div>
@@ -83,8 +80,8 @@
             
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
-                    <div class="font-bold text-white opacity-90">MODO CORPORATIVO</div>
-                    <div class="text-blue-200 text-[10px]">v6.9.2</div>
+                    <div class="font-bold text-white opacity-90">MODO ENTERPRISE</div>
+                    <div class="text-blue-200 text-[10px]">v7.1</div>
                 </div>
             </div>
         </div>
@@ -93,10 +90,10 @@
     <!-- Main Content -->
     <main class="flex-grow container mx-auto p-4 md:p-8 max-w-4xl">
         
-        <!-- DASHBOARD DE CONSUMO -->
+        <!-- DASHBOARD DE CONSUMO (Enterprise Scale) -->
         <div class="mb-4 bg-white p-4 rounded-lg shadow-sm border border-slate-200">
             <h3 class="text-xs font-bold text-slate-400 uppercase mb-3 tracking-wider flex items-center gap-2">
-                <i class="fas fa-chart-line"></i> Monitor de Rendimiento API
+                <i class="fas fa-rocket text-green-500"></i> Monitor de Rendimiento (Licencia Activa)
             </h3>
 
             <!-- Rate Limits Grid -->
@@ -108,7 +105,7 @@
                         <i class="fas fa-tachometer-alt text-blue-400"></i>
                     </div>
                     <div class="text-sm font-mono font-bold text-slate-700 mt-1">
-                        <span id="rpmVal" class="text-blue-600">0</span> / <span class="text-slate-400">10</span>
+                        <span id="rpmVal" class="text-blue-600">0</span> / <span class="text-slate-400">2000</span>
                     </div>
                     <div class="w-full bg-slate-100 h-1.5 rounded-full mt-1">
                         <div id="rpmBar" class="bg-blue-500 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
@@ -122,7 +119,7 @@
                         <i class="fas fa-bolt text-purple-400"></i>
                     </div>
                     <div class="text-sm font-mono font-bold text-slate-700 mt-1">
-                        <span id="tpmVal" class="text-purple-600">0</span> / <span class="text-slate-400">1M</span>
+                        <span id="tpmVal" class="text-purple-600">0</span> / <span class="text-slate-400">4M</span>
                     </div>
                     <div class="w-full bg-slate-100 h-1.5 rounded-full mt-1">
                         <div id="tpmBar" class="bg-purple-500 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
@@ -132,13 +129,13 @@
                 <!-- Timer -->
                 <div>
                     <div class="text-[10px] font-bold text-slate-500 uppercase flex justify-between">
-                        <span>Restitución</span>
-                        <i class="fas fa-hourglass-half text-orange-400"></i>
+                        <span>Estado</span>
+                        <i class="fas fa-check-circle text-green-500"></i>
                     </div>
-                    <div class="text-sm font-mono font-bold text-orange-600 mt-1" id="resetTimer">
-                        0s
+                    <div class="text-sm font-mono font-bold text-green-600 mt-1" id="resetTimer">
+                        Óptimo
                     </div>
-                    <div class="text-[9px] text-slate-400 leading-tight mt-0.5">Para liberar carga</div>
+                    <div class="text-[9px] text-slate-400 leading-tight mt-0.5">Alta Velocidad</div>
                 </div>
             </div>
         </div>
@@ -146,13 +143,14 @@
         <!-- API Key -->
         <div id="apiKeySection" class="mb-8 bg-white p-6 rounded-lg shadow-sm border border-slate-200 border-l-4 border-l-intiza-blue">
             <div class="flex justify-between items-center mb-2">
-                <label class="block text-sm font-bold text-slate-700">Configuración de IA (Gemini 2.5 Preview)</label>
+                <label class="block text-sm font-bold text-slate-700">Configuración de IA (Gemini 1.5 Flash)</label>
                 <div>
                     <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-xs text-intiza-blue hover:underline mr-3"><i class="fas fa-key"></i> Obtener Key</a>
                     <button onclick="resetApiKey()" class="text-xs text-red-500 hover:text-red-700 border border-red-200 px-2 py-1 rounded">Cambiar Key</button>
                 </div>
             </div>
-            <input type="password" id="apiKeyInput" placeholder="Pega aquí tu API Key..." class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-intiza-blue outline-none font-mono text-sm">
+            <input type="password" id="apiKeyInput" placeholder="Pega aquí tu API Key con facturación activa..." class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-intiza-blue outline-none font-mono text-sm">
+            <p class="text-[10px] text-green-600 mt-1 flex items-center gap-1"><i class="fas fa-check"></i> Configurado para cuenta Pay-as-you-go</p>
         </div>
 
         <!-- Progress Steps -->
@@ -315,12 +313,14 @@
 
     <script>
         // --- UTILS & CONFIG ---
-        const GEMINI_MODEL = "gemini-2.5-flash-preview-09-2025"; 
-        const API_DELAY_MS = 6000; 
+        // AHORA SÍ: Modelo 1.5 Flash estable para cuentas de pago
+        const GEMINI_MODEL = "gemini-1.5-flash"; 
+        // DELAY TURBO: 1 segundo (posible gracias a la licencia)
+        const API_DELAY_MS = 1000; 
         
-        // --- LIMITS CONSTANTS ---
-        const RPM_LIMIT = 10; 
-        const TPM_LIMIT = 1000000; 
+        // --- LIMITS CONSTANTS (ENTERPRISE) ---
+        const RPM_LIMIT = 2000; 
+        const TPM_LIMIT = 4000000; 
         const WINDOW_MS = 60000; 
 
         function log(msg, type='info') {
@@ -387,37 +387,23 @@
             const rpm = state.requestLog.length;
             const tpm = state.requestLog.reduce((acc, req) => acc + req.tokens, 0);
             
-            let timeToFree = 0;
-            if (state.requestLog.length > 0) {
-                const oldest = state.requestLog[0].time;
-                timeToFree = Math.max(0, Math.ceil((WINDOW_MS - (now - oldest)) / 1000));
-            }
-
             const rpmEl = getEl('rpmVal');
-            if (rpmEl) rpmEl.textContent = rpm;
-            
+            if(rpmEl) rpmEl.textContent = rpm;
+
             const rpmBar = getEl('rpmBar');
-            if (rpmBar) {
+            if(rpmBar) {
                 rpmBar.style.width = `${Math.min((rpm/RPM_LIMIT)*100, 100)}%`;
                 if(rpm > RPM_LIMIT*0.8) rpmBar.className = "bg-red-500 h-1.5 rounded-full transition-all duration-300";
                 else rpmBar.className = "bg-blue-500 h-1.5 rounded-full transition-all duration-300";
             }
 
             const tpmEl = getEl('tpmVal');
-            if (tpmEl) tpmEl.textContent = tpm.toLocaleString();
+            if(tpmEl) tpmEl.textContent = tpm.toLocaleString();
             
             const tpmBar = getEl('tpmBar');
-            if (tpmBar) tpmBar.style.width = `${Math.min((tpm/TPM_LIMIT)*100, 100)}%`;
-
-            const resetTimer = getEl('resetTimer');
-            if (resetTimer) {
-                resetTimer.textContent = timeToFree + "s";
-                if(timeToFree > 0) resetTimer.className = "text-lg font-mono font-bold text-orange-600 mt-1";
-                else resetTimer.className = "text-lg font-mono font-bold text-green-600 mt-1";
-            }
+            if(tpmBar) tpmBar.style.width = `${Math.min((tpm/TPM_LIMIT)*100, 100)}%`;
         }
         
-
         // --- INIT ---
         window.onload = async function() {
             if(state.apiKey) getEl('apiKeyInput').value = state.apiKey;
@@ -436,7 +422,6 @@
                  log("ERROR: Modo local file:// detectado. La sincronización no funcionará.", 'error');
             }
             
-            // Start Monitor Loop
             setInterval(updateMonitorUI, 1000);
         };
 
@@ -519,25 +504,6 @@
             }
         };
         
-        function updateTokenMeter() {
-            const textLength = state.sourceText.length;
-            const estimatedTokens = Math.ceil(textLength / 4); 
-            const maxTokens = 1000000; 
-            const percentage = Math.min((estimatedTokens / maxTokens) * 100, 100);
-            
-            const bar = document.getElementById('tokenProgressBar');
-            const display = document.getElementById('tokenCountDisplay');
-            
-            if(bar && display) {
-                bar.style.width = percentage + '%';
-                if(percentage > 90) bar.className = "bg-red-500 h-2.5 rounded-full transition-all duration-500";
-                else if(percentage > 70) bar.className = "bg-orange-500 h-2.5 rounded-full transition-all duration-500";
-                else bar.className = "bg-purple-500 h-2.5 rounded-full transition-all duration-500";
-                
-                display.textContent = `${estimatedTokens.toLocaleString()} / ${maxTokens.toLocaleString()} Tokens`;
-            }
-        }
-
         async function refreshDocsUI() {
             const docs = await window.loadDocs();
             const list = getEl('uploadedFilesList');
@@ -545,8 +511,6 @@
             
             if(docs.length > 0) {
                 state.sourceText = docs.map(d => `\n=== DOC (${d.source}): ${d.name} ===\n${d.content}`).join('\n');
-                getEl('storageSize').textContent = docs.length + " Docs";
-                updateTokenMeter();
                 
                 list.innerHTML = '';
                 docs.forEach(d => {
@@ -561,8 +525,6 @@
                 const hasServer = docs.some(d => d.source === 'server');
                 badge.textContent = hasServer ? "Conectado" : "Local";
                 badge.className = hasServer ? "text-[10px] bg-purple-100 text-purple-600 px-2 py-1 rounded border font-bold" : "text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded border";
-            } else {
-                updateTokenMeter();
             }
         }
 
@@ -624,7 +586,6 @@
 
                 if(!txt.trim()) throw new Error("No se encontró texto para analizar.");
 
-                // PROMPT CORREGIDO PARA ROL CISO Y CONSERVACIÓN DE IDs
                 const prompt = `
                     ACTÚA COMO UN CISO EXPERTO EN AUDITORÍA. 
                     Analiza el siguiente texto (que puede ser un cuestionario desordenado) y extrae una lista estructurada de preguntas, controles o requerimientos.
@@ -691,7 +652,6 @@
                 await sleep(API_DELAY_MS); 
 
                 try {
-                    // --- PROMPT CISO DEFINITIVO + DEEP SEARCH + 20 SENTENCES LIMIT + BOLD ---
                     const prompt = `
                         ROL: Actúa como el **CISO de INTIZA**. Estás respondiendo un cuestionario de **Due Diligence** o Auditoría de Seguridad de un **Cliente Corporativo**. 
                         Tu objetivo es transmitir confianza, profesionalismo y solvencia técnica.
