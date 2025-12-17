@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v6.9.3 (JSON Repair)</title>
+    <title>INTIZA CISO AI OFFICER v7.6 (Source Index)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -52,7 +52,7 @@
     <div id="globalError"></div>
     <script>
         window.onerror = function(msg, url, line) {
-            if(msg.includes('ResizeObserver')) return; // Ignorar errores benignos de UI
+            if(msg.includes('ResizeObserver')) return; 
             const div = document.getElementById('globalError');
             div.style.display = 'block';
             div.innerText = `Error Detectado: ${msg} (Línea ${line})`;
@@ -76,7 +76,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-white opacity-90">MODO CORPORATIVO</div>
-                    <div class="text-blue-200 text-[10px]">v6.9.3</div>
+                    <div class="text-blue-200 text-[10px]">v7.6</div>
                 </div>
             </div>
         </div>
@@ -88,7 +88,7 @@
         <!-- DASHBOARD DE CONSUMO -->
         <div class="mb-4 bg-white p-4 rounded-lg shadow-sm border border-slate-200">
             <h3 class="text-xs font-bold text-slate-400 uppercase mb-3 tracking-wider flex items-center gap-2">
-                <i class="fas fa-chart-line"></i> Monitor de Rendimiento API
+                <i class="fas fa-rocket text-green-500"></i> Monitor de Rendimiento (Licencia Activa)
             </h3>
 
             <div class="grid grid-cols-3 gap-4">
@@ -99,7 +99,7 @@
                         <i class="fas fa-tachometer-alt text-blue-400"></i>
                     </div>
                     <div class="text-sm font-mono font-bold text-slate-700 mt-1">
-                        <span id="rpmVal" class="text-blue-600">0</span> / <span class="text-slate-400">10</span>
+                        <span id="rpmVal" class="text-blue-600">0</span> / <span class="text-slate-400">2000</span>
                     </div>
                     <div class="w-full bg-slate-100 h-1.5 rounded-full mt-1">
                         <div id="rpmBar" class="bg-blue-500 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
@@ -113,7 +113,7 @@
                         <i class="fas fa-bolt text-purple-400"></i>
                     </div>
                     <div class="text-sm font-mono font-bold text-slate-700 mt-1">
-                        <span id="tpmVal" class="text-purple-600">0</span> / <span class="text-slate-400">1M</span>
+                        <span id="tpmVal" class="text-purple-600">0</span> / <span class="text-slate-400">4M</span>
                     </div>
                     <div class="w-full bg-slate-100 h-1.5 rounded-full mt-1">
                         <div id="tpmBar" class="bg-purple-500 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
@@ -123,13 +123,13 @@
                 <!-- Timer -->
                 <div>
                     <div class="text-[10px] font-bold text-slate-500 uppercase flex justify-between">
-                        <span>Restitución</span>
-                        <i class="fas fa-hourglass-half text-orange-400"></i>
+                        <span>Estado</span>
+                        <i class="fas fa-check-circle text-green-500"></i>
                     </div>
-                    <div class="text-sm font-mono font-bold text-orange-600 mt-1" id="resetTimer">
-                        0s
+                    <div class="text-sm font-mono font-bold text-green-600 mt-1" id="resetTimer">
+                        Óptimo
                     </div>
-                    <div class="text-[9px] text-slate-400 leading-tight mt-0.5">Para liberar carga</div>
+                    <div class="text-[9px] text-slate-400 leading-tight mt-0.5">Alta Velocidad</div>
                 </div>
             </div>
         </div>
@@ -137,13 +137,14 @@
         <!-- API Key -->
         <div id="apiKeySection" class="mb-8 bg-white p-6 rounded-lg shadow-sm border border-slate-200 border-l-4 border-l-intiza-blue">
             <div class="flex justify-between items-center mb-2">
-                <label class="block text-sm font-bold text-slate-700">Configuración de IA (Gemini 2.5 Preview)</label>
+                <label class="block text-sm font-bold text-slate-700">Configuración de IA (Gemini 1.5 Flash)</label>
                 <div>
                     <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-xs text-intiza-blue hover:underline mr-3"><i class="fas fa-key"></i> Obtener Key</a>
                     <button onclick="resetApiKey()" class="text-xs text-red-500 hover:text-red-700 border border-red-200 px-2 py-1 rounded">Cambiar Key</button>
                 </div>
             </div>
-            <input type="password" id="apiKeyInput" placeholder="Pega aquí tu API Key..." class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-intiza-blue outline-none font-mono text-sm">
+            <input type="password" id="apiKeyInput" placeholder="Pega aquí tu API Key con facturación activa..." class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-intiza-blue outline-none font-mono text-sm">
+            <p class="text-[10px] text-green-600 mt-1 flex items-center gap-1"><i class="fas fa-check"></i> Configurado para cuenta Pay-as-you-go</p>
         </div>
 
         <!-- Progress Steps -->
@@ -289,7 +290,19 @@
                  <button onclick="window.print()" class="text-xs bg-white border shadow-sm px-3 py-1 rounded hover:bg-slate-50"><i class="fas fa-print"></i> Imprimir</button>
                  <button onclick="sendEmail()" class="text-xs bg-blue-50 border border-blue-200 text-blue-700 px-3 py-1 rounded font-semibold"><i class="fas fa-envelope"></i> Email</button>
             </div>
-            <div id="resultsContainer" class="space-y-6 pb-20 min-h-[300px]"></div>
+            
+            <div id="resultsContainer" class="space-y-6 pb-10 min-h-[300px]"></div>
+
+            <!-- ÍNDICE DE FUENTES (NUEVO) -->
+            <div id="sourcesSummaryContainer" class="hidden mt-8 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                <h4 class="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+                    <i class="fas fa-book text-intiza-blue"></i> Índice de Documentos Citados
+                </h4>
+                <div id="sourcesList" class="text-xs text-slate-600 space-y-1 columns-1 sm:columns-2">
+                    <!-- Dynamic Content -->
+                </div>
+            </div>
+
             <div class="mt-6 flex justify-start"><button onclick="showStep(2)" class="text-slate-500 hover:text-slate-700 font-medium px-4 py-2">Atrás</button></div>
         </div>
     </main>
@@ -306,12 +319,12 @@
 
     <script>
         // --- UTILS & CONFIG ---
-        const GEMINI_MODEL = "gemini-2.5-flash-preview-09-2025"; 
-        const API_DELAY_MS = 6000; 
+        const GEMINI_MODEL = "gemini-1.5-flash"; 
+        const API_DELAY_MS = 1000; 
         
-        // --- LIMITS CONSTANTS ---
-        const RPM_LIMIT = 10; 
-        const TPM_LIMIT = 1000000; 
+        // --- LIMITS CONSTANTS (ENTERPRISE) ---
+        const RPM_LIMIT = 2000; 
+        const TPM_LIMIT = 4000000; 
         const WINDOW_MS = 60000; 
 
         function log(msg, type='info') {
@@ -323,6 +336,7 @@
             else if(type==='success') d.style.color = '#10b981';
             box.appendChild(d);
             box.scrollTop = box.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${msg}`);
         }
         function getEl(id) { return document.getElementById(id); }
         const sleep = (ms) => new Promise(r => setTimeout(r, ms));
@@ -420,6 +434,7 @@
                 const pending = state.questions.filter(q => q.status === 'pending');
                 if(pending.length > 0) getEl('btnResume').classList.remove('hidden');
                 updateCounterUI();
+                updateSourcesIndex();
             }
             
             if(window.location.protocol === 'file:') {
@@ -505,6 +520,25 @@
                 loader.classList.add('hidden');
             }
         };
+        
+        function updateTokenMeter() {
+            const textLength = state.sourceText.length;
+            const estimatedTokens = Math.ceil(textLength / 4); 
+            const maxTokens = 1000000; 
+            const percentage = Math.min((estimatedTokens / maxTokens) * 100, 100);
+            
+            const bar = document.getElementById('tokenProgressBar');
+            const display = document.getElementById('tokenCountDisplay');
+            
+            if(bar && display) {
+                bar.style.width = percentage + '%';
+                if(percentage > 90) bar.className = "bg-red-500 h-2.5 rounded-full transition-all duration-500";
+                else if(percentage > 70) bar.className = "bg-orange-500 h-2.5 rounded-full transition-all duration-500";
+                else bar.className = "bg-purple-500 h-2.5 rounded-full transition-all duration-500";
+                
+                display.textContent = `${estimatedTokens.toLocaleString()} / ${maxTokens.toLocaleString()} Tokens`;
+            }
+        }
 
         async function refreshDocsUI() {
             const docs = await window.loadDocs();
@@ -513,6 +547,8 @@
             
             if(docs.length > 0) {
                 state.sourceText = docs.map(d => `\n=== DOC (${d.source}): ${d.name} ===\n${d.content}`).join('\n');
+                getEl('storageSize').textContent = docs.length + " Docs";
+                updateTokenMeter();
                 
                 list.innerHTML = '';
                 docs.forEach(d => {
@@ -527,6 +563,8 @@
                 const hasServer = docs.some(d => d.source === 'server');
                 badge.textContent = hasServer ? "Conectado" : "Local";
                 badge.className = hasServer ? "text-[10px] bg-purple-100 text-purple-600 px-2 py-1 rounded border font-bold" : "text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded border";
+            } else {
+                updateTokenMeter();
             }
         }
 
@@ -607,27 +645,8 @@
                 trackRequest(Math.ceil(prompt.length/4));
                 const res = await callGemini(prompt, true);
                 
-                // MEJORA: Sanitización de JSON más robusta para evitar "Unterminated string"
-                let cleanJson = res.replace(/```json|```/g, '').trim();
-                // Encuentra el primer [ y el último ]
-                const firstBracket = cleanJson.indexOf('[');
-                const lastBracket = cleanJson.lastIndexOf(']');
-                if (firstBracket !== -1 && lastBracket !== -1) {
-                    cleanJson = cleanJson.substring(firstBracket, lastBracket + 1);
-                }
-                
-                let qs;
-                try {
-                    qs = JSON.parse(cleanJson);
-                } catch (e) {
-                     // Intento de reparación simple si falla por corte
-                    console.warn("JSON roto, intentando reparar cierre...");
-                    if (!cleanJson.endsWith(']')) cleanJson += ']';
-                    if (!cleanJson.endsWith('}]')) cleanJson += '}]';
-                    qs = JSON.parse(cleanJson);
-                }
-
-                qs = qs.map(q=>({...q, status:'pending', attempts:0}));
+                const cleanJson = res.replace(new RegExp('```json|```', 'g'), '').trim();
+                const qs = JSON.parse(cleanJson).map(q=>({...q, status:'pending', attempts:0}));
                 
                 await dbOp('readwrite', STORE_QUESTIONS, s => s.clear());
                 for(const q of qs) await window.saveQ(q);
@@ -636,7 +655,7 @@
                 getEl('extractingLoader').classList.add('hidden');
                 getEl('questionsListArea').classList.remove('hidden');
                 getEl('btnToStep3').classList.remove('hidden');
-            } catch(e) { alert("Error al leer preguntas: " + e.message); console.error(e); getEl('extractingLoader').classList.add('hidden'); getEl('btnAnalyze').classList.remove('hidden'); }
+            } catch(e) { alert(e.message); console.error(e); getEl('extractingLoader').classList.add('hidden'); getEl('btnAnalyze').classList.remove('hidden'); }
         }
 
         function updateQuestionsUI() {
@@ -650,6 +669,38 @@
              const done = state.questions.filter(q => q.status === 'done').length;
              const counter = document.getElementById('qCounterDisplay');
              if(counter) counter.textContent = `${done} / ${total}`;
+        }
+
+        // --- NEW: SOURCE COLLECTOR ---
+        function updateSourcesIndex() {
+            const container = getEl('sourcesSummaryContainer');
+            const list = getEl('sourcesList');
+            const sources = new Set();
+            
+            state.questions.forEach(q => {
+                if(q.status === 'done' && q.answer) {
+                    // Buscar patrones "FUENTES CLAVE: [Doc1]"
+                    const matches = q.answer.match(/FUENTES CLAVE: (.*)/g);
+                    if(matches) {
+                        matches.forEach(m => {
+                            const raw = m.replace('FUENTES CLAVE:', '').trim();
+                            // Limpiar y separar por comas
+                            const docs = raw.split(',').map(d => d.trim().replace(/^\[|\]$/g, '').replace(/\.$/, ''));
+                            docs.forEach(doc => {
+                                if(doc.length > 2) sources.add(doc);
+                            });
+                        });
+                    }
+                }
+            });
+
+            if (sources.size > 0) {
+                container.classList.remove('hidden');
+                list.innerHTML = '';
+                sources.forEach(s => {
+                    list.innerHTML += `<div class="flex items-center gap-1"><i class="fas fa-file-alt text-slate-400 text-[10px]"></i> <span>${s}</span></div>`;
+                });
+            }
         }
 
         // --- EXECUTION ---
@@ -667,29 +718,27 @@
                 if(card) {
                     card.scrollIntoView({behavior:'smooth',block:'center'});
                     card.classList.add('border-intiza-blue','shadow-md');
-                    card.querySelector('.status-ind').innerHTML=`<i class="fas fa-circle-notch fa-spin text-intiza-blue"></i> Analizando...`;
+                    card.querySelector('.status-ind').innerHTML=`<i class="fas fa-circle-notch fa-spin text-intiza-blue"></i> Analizando (Espera ${API_DELAY_MS/1000}s)...`;
                 }
                 getEl('progressStats').textContent=`Analizando ID ${q.id}...`;
                 
                 await sleep(API_DELAY_MS); 
 
                 try {
-                    // --- PROMPT CISO DEFINITIVO + DEEP SEARCH + 20 SENTENCES LIMIT + BOLD ---
+                    // --- PROMPT MAESTRO CISO + FOOTER FUENTES ---
                     const prompt = `
-                        ROL: Actúa como el **CISO de INTIZA**. Estás respondiendo un cuestionario de **Due Diligence** o Auditoría de Seguridad de un **Cliente Corporativo**. 
-                        Tu objetivo es transmitir confianza, profesionalismo y solvencia técnica.
+                        ROL: Actúa como el **CISO de INTIZA**.
                         
                         INSTRUCCIONES DE BÚSQUEDA (Deep Search):
-                        1. NO te quedes con la primera coincidencia. Muchos temas se mencionan en una "Política" general pero se detallan en un "Procedimiento" técnico.
-                        2. Lee TODOS los documentos del contexto.
-                        3. Si encuentras una contradicción, prioriza el documento más específico o reciente.
+                        1. NO te quedes con la primera coincidencia.
+                        2. Prioriza documentos específicos sobre políticas generales.
                         
                         FORMATO DE RESPUESTA:
-                        - Respuesta en ESPAÑOL, precisa y directa.
-                        - LÍMITE DE LONGITUD: Máximo 20 oraciones. Sé conciso pero riguroso.
-                        - Justifica CADA afirmación citando la fuente: "Según la Política [Nombre], sección [X]...".
-                        - IMPORTANTE: Pon el nombre del documento y la sección siempre en **negrita** (usando asteriscos dobles).
-                        - Evita ser evasivo; usa terminología estándar (ISO 27001, NIST).
+                        - Respuesta en ESPAÑOL.
+                        - LÍMITE: Máximo 20 oraciones.
+                        - Cita fuentes en **negrita**.
+                        - AL FINAL DE LA RESPUESTA (OBLIGATORIO): Añade una línea final exacta: 
+                          "FUENTES CLAVE: [NombreDoc1], [NombreDoc2]" 
                         
                         CONTEXTO (Fuentes): 
                         """${state.sourceText.substring(0, 1000000)}"""
@@ -704,6 +753,7 @@
                     await window.saveQ(q); 
                     renderCard(card,q);
                     updateCounterUI();
+                    updateSourcesIndex();
                     
                 } catch(e) {
                     if(e.name==='AbortError') break;
@@ -743,6 +793,7 @@
                 `;
                 c.appendChild(d);
             });
+            updateSourcesIndex(); // Restore index on load
         }
         function renderCard(c,q) { if(c) { c.querySelector('.status-ind').innerHTML=getIcon(q.status); c.querySelector('.ans-body').innerHTML=format(q.answer); } }
         function getIcon(s) { return s==='done'?'<i class="fas fa-check text-intiza-blue"></i>':s==='error'?'<i class="fas fa-times text-red-500"></i>':s; }
@@ -755,7 +806,7 @@
             getEl(`fb-${id}`).classList.add('hidden');
             const c = getEl(`card-${id}`); c.querySelector('.ans-body').innerHTML='<i class="fas fa-spin fa-sync"></i>';
             
-            const p = `ROL: CISO Senior. TAREA: Corregir respuesta anterior. PREGUNTA: "${q.text}" ERROR REPORTADO: "${fb}". INSTRUCCIÓN: Revisa exhaustivamente TODAS las fuentes nuevamente. LÍMITE: Máximo 20 oraciones. FORMATO: Usa **negrita** para citar nombres de documentos y secciones. FUENTES: ${state.sourceText.substring(0,1000000)}`;
+            const p = `ROL: CISO Senior. TAREA: Corregir. PREGUNTA: "${q.text}" ERROR: "${fb}". FUENTES: ${state.sourceText.substring(0,1000000)} RECUERDA: Añade línea final 'FUENTES CLAVE: [Doc]'`;
             
             trackRequest(Math.ceil(p.length/4));
             await sleep(API_DELAY_MS); 
@@ -766,6 +817,7 @@
                  await window.saveQ(q); 
                  renderCard(c,q);
                  updateCounterUI();
+                 updateSourcesIndex();
             } catch(e) {
                 alert(e.message);
             }
