@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v8.8 (Batch 5s Delay)</title>
+    <title>INTIZA CISO AI OFFICER v8.9 (Auto-Resume & Crash Guard)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -57,6 +57,16 @@
             div.style.display = 'block';
             div.innerText = `Error Detectado: ${msg} (Línea ${line})`;
         };
+        
+        // Listener Global de Conexión
+        window.addEventListener('offline', function() {
+            const stats = document.getElementById('progressStats');
+            if(stats) stats.innerHTML = '<span class="text-red-600 font-bold bg-red-100 px-2 py-1 rounded"><i class="fas fa-wifi"></i> INTERNET CAÍDO</span>';
+        });
+        window.addEventListener('online', function() {
+            const stats = document.getElementById('progressStats');
+            if(stats) stats.innerHTML = '<span class="text-green-600 font-bold"><i class="fas fa-wifi"></i> Conexión recuperada. Pulsa Reanudar.</span>';
+        });
     </script>
 
     <!-- Header -->
@@ -76,7 +86,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-white opacity-90">MODO CORPORATIVO</div>
-                    <div class="text-blue-200 text-[10px]">v8.8 Batch 5s Delay</div>
+                    <div class="text-blue-200 text-[10px]">v8.9 Crash Guard</div>
                 </div>
             </div>
         </div>
@@ -299,7 +309,9 @@
 
                     <div class="flex gap-2">
                          <button id="btnStop" onclick="stopProcessing()" class="hidden text-xs bg-red-100 text-red-600 border border-red-200 px-3 py-1 rounded font-bold hover:bg-red-200"><i class="fas fa-stop"></i> PAUSAR</button>
-                         <button id="btnResume" onclick="startQueueProcessing()" class="hidden text-xs bg-green-100 text-green-700 border border-green-200 px-3 py-1 rounded font-bold hover:bg-green-200"><i class="fas fa-play"></i> REANUDAR</button>
+                         <button id="btnResume" onclick="startQueueProcessing()" class="hidden text-xs bg-green-100 text-green-700 border border-green-200 px-3 py-1 rounded font-bold hover:bg-green-200 shadow-md animate-pulse">
+                            <i class="fas fa-play"></i> REANUDAR
+                         </button>
                     </div>
                 </div>
             </div>
@@ -337,12 +349,12 @@
 
     <script>
         // --- UTILS & CONFIG ---
-        const API_DELAY_MS = 5000; // INCREASED DELAY FOR STABILITY (5 SECONDS)
+        const API_DELAY_MS = 5000; // 5s Delay
         const RPM_LIMIT = 2000; 
         const TPM_LIMIT = 4000000; 
         const WINDOW_MS = 60000; 
 
-        // LISTA DE CANDIDATOS PARA AUTO-DETECCIÓN (INCLUYE NUEVAS GENERACIONES)
+        // LISTA DE CANDIDATOS PARA AUTO-DETECCIÓN
         const MODEL_CANDIDATES = [
             "gemini-2.5-flash",       
             "gemini-2.0-flash",       
@@ -436,7 +448,6 @@
             
             for (const model of MODEL_CANDIDATES) {
                 msg.textContent = `Probando: ${model}...`;
-                // Pequeño delay para no saturar la key durante la prueba
                 await sleep(300); 
                 const works = await testModelConnection(key, model);
                 if (works) {
@@ -491,8 +502,14 @@
             if(qs.length > 0) {
                 state.questions = qs.sort((a,b) => a.id.localeCompare(b.id, undefined, {numeric: true}));
                 updateQuestionsUI(); renderResultsUI(); enableStep(3);
-                const pending = state.questions.filter(q => q.status === 'pending');
-                if(pending.length > 0) getEl('btnResume').classList.remove('hidden');
+                
+                // DETECCIÓN DE TRABAJO PENDIENTE AL REINICIAR
+                const pending = state.questions.filter(q => q.status === 'pending' || q.status === 'retry');
+                if(pending.length > 0) {
+                    getEl('btnResume').classList.remove('hidden');
+                    getEl('progressStats').innerHTML = `<span class="text-amber-600 font-bold"><i class="fas fa-history"></i> Recuperado: ${pending.length} pendientes.</span>`;
+                }
+                
                 updateCounterUI();
                 updateSourcesIndex();
             }
@@ -837,8 +854,15 @@
             }
         }
 
-        // --- EXECUTION (MODIFIED FOR BATCHING) ---
+        // --- EXECUTION (AUTO-RESUME & CRASH GUARD) ---
         async function startQueueProcessing() {
+            
+            // CHECK ONLINE STATUS FIRST
+            if(!navigator.onLine) {
+                alert("No tienes conexión a internet. Conéctate para empezar.");
+                return;
+            }
+
             showStep(3); state.processing=true; state.abort=new AbortController();
             getEl('btnStop').classList.remove('hidden');
             getEl('btnResume').classList.add('hidden');
@@ -847,14 +871,22 @@
             
             const pending = state.questions.filter(q => q.status==='pending'||q.status==='retry');
             
-            // CONFIGURACIÓN DE LOTES
             const BATCH_SIZE = 5;
             let processedInBatch = 0;
 
             for(const q of pending) {
                 if(!state.processing) break;
 
-                // Lógica de Lote
+                // CRASH GUARD: Real-time Check
+                if(!navigator.onLine) {
+                    state.processing = false;
+                    getEl('progressStats').innerHTML = `<span class="text-red-600 font-bold"><i class="fas fa-wifi"></i> Conexión perdida. Pausado.</span>`;
+                    getEl('btnStop').classList.add('hidden');
+                    getEl('btnResume').classList.remove('hidden');
+                    alert("Se perdió la conexión. Pulsa 'Reanudar' cuando vuelva internet.");
+                    break;
+                }
+
                 processedInBatch++;
 
                 const card = getEl(`card-${q.id}`);
@@ -868,7 +900,6 @@
                 await sleep(API_DELAY_MS); 
 
                 try {
-                    // --- PROMPT MAESTRO CISO + FOOTER FUENTES ---
                     const prompt = `
                         ROL: Actúa como el **CISO de INTIZA**. Estás respondiendo un cuestionario de **Due Diligence** o Auditoría de Seguridad de un **Cliente Corporativo**.
                         
@@ -896,6 +927,21 @@
                     await window.saveQ(q); renderCard(card,q); updateCounterUI(); updateSourcesIndex();
                 } catch(e) {
                     if(e.name==='AbortError') break;
+                    
+                    // CRASH GUARD: Detect fetch failure
+                    if(e.message.includes('Failed to fetch') || e.message.includes('NetworkError')) {
+                        state.processing = false;
+                        getEl('progressStats').innerHTML = `<span class="text-red-600 font-bold"><i class="fas fa-plug"></i> Error de Red Detectado. Pausado.</span>`;
+                        getEl('btnStop').classList.add('hidden');
+                        getEl('btnResume').classList.remove('hidden');
+                        if(card) {
+                            card.classList.remove('border-intiza-blue','shadow-md');
+                            card.querySelector('.status-ind').innerHTML=`<i class="fas fa-pause text-orange-500"></i> Pausado`;
+                        }
+                        alert("Error de conexión con la IA. El proceso se pausó para no perder datos. Pulsa 'Reanudar'.");
+                        break;
+                    }
+
                     q.attempts++;
                     q.status='error'; q.answer="Error: "+e.message; 
                     if(card) card.classList.add('border-red-500'); 
@@ -903,20 +949,21 @@
                 }
                 if(card) card.classList.remove('border-intiza-blue','shadow-md');
 
-                // Pausa entre lotes (Batch Cooling)
                 if (processedInBatch >= BATCH_SIZE) {
                     const stats = getEl('progressStats');
                     const originalText = stats.textContent;
                     stats.innerHTML = `<span class="text-orange-500 font-bold"><i class="fas fa-coffee"></i> Enfriando motor (Pausa de seguridad)...</span>`;
-                    await sleep(3000); // 3 segundos extra
+                    await sleep(3000); 
                     stats.textContent = originalText;
-                    processedInBatch = 0; // Reiniciar contador
+                    processedInBatch = 0; 
                 }
             }
-            state.processing=false;
-            getEl('btnStop').classList.add('hidden');
-            getEl('progressStats').textContent = state.questions.some(q=>q.status==='pending') ? "Pausado" : "Completado";
-            if(state.questions.some(q=>q.status==='pending')) getEl('btnResume').classList.remove('hidden');
+            if(state.processing) {
+                state.processing=false;
+                getEl('btnStop').classList.add('hidden');
+                getEl('progressStats').textContent = state.questions.some(q=>q.status==='pending') ? "Pausado" : "Completado";
+                if(state.questions.some(q=>q.status==='pending')) getEl('btnResume').classList.remove('hidden');
+            }
         }
 
         function stopProcessing() { if(state.abort) state.abort.abort(); state.processing=false; }
