@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v7.3 (Selector Fix)</title>
+    <title>INTIZA CISO AI OFFICER v7.4 (Smart Auto-Detect)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -77,8 +77,8 @@
             
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
-                    <div class="font-bold text-white opacity-90">MODO ENTERPRISE</div>
-                    <div class="text-blue-200 text-[10px]">v7.3</div>
+                    <div class="font-bold text-white opacity-90">MODO CORPORATIVO</div>
+                    <div class="text-blue-200 text-[10px]">v7.4</div>
                 </div>
             </div>
         </div>
@@ -90,7 +90,7 @@
         <!-- DASHBOARD DE CONSUMO -->
         <div class="mb-4 bg-white p-4 rounded-lg shadow-sm border border-slate-200">
             <h3 class="text-xs font-bold text-slate-400 uppercase mb-3 tracking-wider flex items-center gap-2">
-                <i class="fas fa-rocket text-green-500"></i> Monitor de Rendimiento (Licencia Activa)
+                <i class="fas fa-chart-line"></i> Monitor de Rendimiento API
             </h3>
             <div class="grid grid-cols-3 gap-4">
                 <!-- RPM -->
@@ -109,36 +109,38 @@
                 <div>
                     <div class="text-[10px] font-bold text-slate-500 uppercase flex justify-between"><span>Estado</span><i class="fas fa-check-circle text-green-500"></i></div>
                     <div class="text-sm font-mono font-bold text-green-600 mt-1" id="resetTimer">Óptimo</div>
-                    <div class="text-[9px] text-slate-400 leading-tight mt-0.5">Alta Velocidad</div>
                 </div>
             </div>
         </div>
 
-        <!-- API Key & Model Config (SELECTOR AÑADIDO) -->
+        <!-- API Key & Auto-Detect -->
         <div id="apiKeySection" class="mb-8 bg-white p-6 rounded-lg shadow-sm border border-slate-200 border-l-4 border-l-intiza-blue">
             <div class="flex justify-between items-center mb-2">
                 <label class="block text-sm font-bold text-slate-700">Configuración de IA</label>
                 <div>
                     <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-xs text-intiza-blue hover:underline mr-3"><i class="fas fa-key"></i> Obtener Key</a>
-                    <button onclick="resetApiKey()" class="text-xs text-red-500 hover:text-red-700 border border-red-200 px-2 py-1 rounded">Cambiar Key</button>
+                    <button onclick="resetApiKey()" class="text-xs text-red-500 hover:text-red-700 border border-red-200 px-2 py-1 rounded">Cambiar</button>
                 </div>
             </div>
             
             <div class="flex flex-col sm:flex-row gap-3">
                 <input type="password" id="apiKeyInput" placeholder="Pega aquí tu API Key..." class="flex-1 p-2 border border-slate-300 rounded focus:ring-2 focus:ring-intiza-blue outline-none font-mono text-sm">
                 
-                <div class="w-full sm:w-64">
-                    <select id="modelSelect" class="w-full p-2 border border-slate-300 rounded bg-slate-50 text-sm font-mono focus:ring-2 focus:ring-intiza-blue outline-none" onchange="saveModelPref()">
-                        <option value="gemini-1.5-flash-002">Gemini 1.5 Flash-002 (Recomendado)</option>
-                        <option value="gemini-1.5-flash">Gemini 1.5 Flash (Alias Genérico)</option>
-                        <option value="gemini-1.5-flash-001">Gemini 1.5 Flash-001 (Legacy)</option>
-                        <option value="gemini-1.5-pro">Gemini 1.5 Pro (Más potente)</option>
-                        <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Experimental)</option>
-                    </select>
+                <button id="btnAutoConnect" onclick="startAutoDetection()" class="w-full sm:w-auto bg-intiza-blue hover:bg-intiza-dark text-white px-4 py-2 rounded font-bold text-sm shadow flex items-center justify-center gap-2 transition-all">
+                    <i class="fas fa-magic"></i> Conexión Inteligente
+                </button>
+            </div>
+            
+            <!-- Connection Status Log -->
+            <div id="connectionStatus" class="hidden mt-3 p-2 bg-slate-50 border border-slate-200 rounded text-xs font-mono text-slate-600">
+                <div class="flex items-center gap-2">
+                    <div class="loader w-3 h-3 border-2" id="detectLoader"></div>
+                    <span id="detectMsg">Analizando capacidades de tu licencia...</span>
                 </div>
             </div>
-            <p class="text-[10px] text-slate-500 mt-2 flex items-center gap-1">
-                <i class="fas fa-info-circle text-intiza-blue"></i> Si recibes error "Not Found", prueba con otra versión de la lista (-002 o -001).
+            
+            <p id="activeModelBadge" class="hidden mt-2 text-xs font-bold text-green-600 bg-green-50 p-1.5 rounded border border-green-100 inline-block">
+                <i class="fas fa-check-circle"></i> Usando motor: <span id="modelNameDisplay">...</span>
             </p>
         </div>
 
@@ -302,10 +304,17 @@
 
     <script>
         // --- UTILS & CONFIG ---
-        const DEFAULT_MODEL = "gemini-1.5-flash-002"; // DEFAULT MEJORADO
-        const API_DELAY_MS = 1000; // Turbo delay for Paid
-
-        // --- LIMITS CONSTANTS (ENTERPRISE) ---
+        // LISTA DE CANDIDATOS PARA AUTO-DETECCIÓN
+        const MODEL_CANDIDATES = [
+            "gemini-1.5-flash",        // Prioridad 1: Estándar (Pago)
+            "gemini-1.5-flash-001",    // Prioridad 2: Versión fija
+            "gemini-1.5-flash-002",    // Prioridad 3: Nueva versión
+            "gemini-2.0-flash-exp",    // Prioridad 4: Experimental (Free)
+            "gemini-1.5-pro",          // Prioridad 5: Pro
+            "gemini-2.5-flash-preview-09-2025" // Fallback último recurso
+        ];
+        
+        const API_DELAY_MS = 1000; // Turbo delay por defecto (ajustable)
         const RPM_LIMIT = 2000; 
         const TPM_LIMIT = 4000000; 
         const WINDOW_MS = 60000; 
@@ -319,7 +328,6 @@
             else if(type==='success') d.style.color = '#10b981';
             box.appendChild(d);
             box.scrollTop = box.scrollHeight;
-            console.log(`[${type.toUpperCase()}] ${msg}`);
         }
         function getEl(id) { return document.getElementById(id); }
         const sleep = (ms) => new Promise(r => setTimeout(r, ms));
@@ -366,10 +374,117 @@
             abort:null, 
             processing:false, 
             requestLog: [],
-            model: localStorage.getItem('ciso_model') || DEFAULT_MODEL 
+            model: localStorage.getItem('ciso_active_model') || '' // Start empty if not saved
         };
 
-        // --- RATE MONITOR LOGIC ---
+        // --- AUTO-DETECT LOGIC ---
+        window.startAutoDetection = async function() {
+            const key = getEl('apiKeyInput').value.trim();
+            if(!key) return alert("Por favor ingresa tu API Key primero.");
+            
+            state.apiKey = key;
+            localStorage.setItem('ciso_key', key);
+
+            // UI Feedback
+            const statusBox = getEl('connectionStatus');
+            const loader = getEl('detectLoader');
+            const msg = getEl('detectMsg');
+            const btn = getEl('btnAutoConnect');
+            
+            statusBox.classList.remove('hidden');
+            loader.classList.remove('hidden');
+            msg.textContent = "Probando modelos disponibles...";
+            msg.className = "text-slate-600";
+            btn.disabled = true;
+            btn.classList.add('opacity-50');
+
+            // Try models sequentially
+            let foundModel = null;
+            
+            for (const model of MODEL_CANDIDATES) {
+                msg.textContent = `Probando: ${model}...`;
+                const works = await testModelConnection(key, model);
+                if (works) {
+                    foundModel = model;
+                    break;
+                }
+            }
+
+            if (foundModel) {
+                // SUCCESS
+                state.model = foundModel;
+                localStorage.setItem('ciso_active_model', foundModel);
+                
+                msg.textContent = "¡Conexión Exitosa!";
+                msg.className = "text-green-600 font-bold";
+                loader.classList.add('hidden');
+                
+                getEl('activeModelBadge').classList.remove('hidden');
+                getEl('modelNameDisplay').textContent = foundModel;
+                
+                setTimeout(() => statusBox.classList.add('hidden'), 3000);
+            } else {
+                // FAIL ALL
+                msg.textContent = "Error: Ningún modelo compatible con tu API Key.";
+                msg.className = "text-red-500 font-bold";
+                loader.classList.add('hidden');
+            }
+            
+            btn.disabled = false;
+            btn.classList.remove('opacity-50');
+        };
+
+        async function testModelConnection(key, modelName) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${key}`;
+            const body = { contents: [{ parts: [{ text: "Ping" }] }] };
+            try {
+                const r = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+                if (r.ok) return true;
+                return false;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        // --- INIT ---
+        window.onload = async function() {
+            if(state.apiKey) {
+                getEl('apiKeyInput').value = state.apiKey;
+                // If we have a saved model, show badge
+                if(state.model) {
+                    getEl('activeModelBadge').classList.remove('hidden');
+                    getEl('modelNameDisplay').textContent = state.model;
+                }
+            }
+            
+            await refreshDocsUI();
+            
+            const qs = await window.loadQs();
+            if(qs.length > 0) {
+                state.questions = qs.sort((a,b) => a.id.localeCompare(b.id, undefined, {numeric: true}));
+                updateQuestionsUI(); renderResultsUI(); enableStep(3);
+                const pending = state.questions.filter(q => q.status === 'pending');
+                if(pending.length > 0) getEl('btnResume').classList.remove('hidden');
+                updateCounterUI();
+            }
+            
+            setInterval(updateMonitorUI, 1000);
+        };
+
+        // --- KEY MANAGEMENT ---
+        window.resetApiKey = function() {
+            if(confirm("¿Cambiar API Key?")) {
+                localStorage.removeItem('ciso_key');
+                localStorage.removeItem('ciso_active_model');
+                state.apiKey = '';
+                state.model = '';
+                getEl('apiKeyInput').value = '';
+                getEl('activeModelBadge').classList.add('hidden');
+                getEl('apiKeyInput').focus();
+            }
+        };
+
+        // --- RATE MONITOR ---
         function trackRequest(tokens) {
             const now = Date.now();
             state.requestLog.push({ time: now, tokens: tokens });
@@ -382,128 +497,57 @@
             const rpm = state.requestLog.length;
             const tpm = state.requestLog.reduce((acc, req) => acc + req.tokens, 0);
             
-            const rpmEl = getEl('rpmVal');
-            if (rpmEl) rpmEl.textContent = rpm;
-            
-            const rpmBar = getEl('rpmBar');
-            if (rpmBar) {
-                rpmBar.style.width = `${Math.min((rpm/RPM_LIMIT)*100, 100)}%`;
-                if(rpm > RPM_LIMIT*0.8) rpmBar.className = "bg-red-500 h-1.5 rounded-full transition-all duration-300";
-                else rpmBar.className = "bg-blue-500 h-1.5 rounded-full transition-all duration-300";
-            }
+            const rpmEl = getEl('rpmVal'); if(rpmEl) rpmEl.textContent = rpm;
+            const rpmBar = getEl('rpmBar'); 
+            if(rpmBar) rpmBar.style.width = `${Math.min((rpm/RPM_LIMIT)*100, 100)}%`;
 
-            const tpmEl = getEl('tpmVal');
-            if (tpmEl) tpmEl.textContent = tpm.toLocaleString();
-            
+            const tpmEl = getEl('tpmVal'); if(tpmEl) tpmEl.textContent = tpm.toLocaleString();
             const tpmBar = getEl('tpmBar');
-            if (tpmBar) tpmBar.style.width = `${Math.min((tpm/TPM_LIMIT)*100, 100)}%`;
+            if(tpmBar) tpmBar.style.width = `${Math.min((tpm/TPM_LIMIT)*100, 100)}%`;
         }
-
-        // --- INIT ---
-        window.onload = async function() {
-            if(state.apiKey) getEl('apiKeyInput').value = state.apiKey;
-            
-            // Set Dropdown value
-            const selector = getEl('modelSelect');
-            if(selector) selector.value = state.model;
-
-            await refreshDocsUI();
-            
-            const qs = await window.loadQs();
-            if(qs.length > 0) {
-                state.questions = qs.sort((a,b) => a.id.localeCompare(b.id, undefined, {numeric: true}));
-                updateQuestionsUI(); renderResultsUI(); enableStep(3);
-                const pending = state.questions.filter(q => q.status === 'pending');
-                if(pending.length > 0) getEl('btnResume').classList.remove('hidden');
-                updateCounterUI();
-            }
-            
-            if(window.location.protocol === 'file:') {
-                 log("ERROR: Modo local file:// detectado. La sincronización no funcionará.", 'error');
-            }
-            setInterval(updateMonitorUI, 1000);
-        };
-
-        // --- MODEL SELECTOR ---
-        window.saveModelPref = function() {
-            const m = getEl('modelSelect').value;
-            state.model = m;
-            localStorage.setItem('ciso_model', m);
-        };
-
-        // --- KEY MANAGEMENT ---
-        window.resetApiKey = function() {
-            if(confirm("¿Seguro que quieres cambiar la API Key? Esto borrará la clave actual.")) {
-                localStorage.removeItem('ciso_key');
-                state.apiKey = '';
-                getEl('apiKeyInput').value = '';
-                getEl('apiKeyInput').focus();
-            }
-        };
 
         // --- SYNC FUNCTION ---
         window.debugSync = async function() {
             const loader = getEl('syncLoader');
             const area = getEl('syncArea');
-            const title = getEl('syncTitle');
             const logBox = getEl('syncLog');
-            
             area.classList.remove('hidden');
             loader.classList.remove('hidden');
             logBox.innerHTML = ''; 
-            title.textContent = "Sincronizando...";
-            log("Iniciando proceso...");
 
             if (window.location.protocol === 'file:') {
-                log("ERROR FATAL: Protocolo file:// no soportado.", 'error');
+                alert("Error: Sincronización requiere HTTP/HTTPS (no file://).");
                 loader.classList.add('hidden');
                 return;
             }
 
             try {
-                log("Leyendo manifest.json...");
                 const manifestRes = await fetch('manifest.json?t=' + new Date().getTime());
-                
-                if(manifestRes.status === 404) throw new Error("No se encontró 'manifest.json'.");
-                if(!manifestRes.ok) throw new Error(`Error HTTP ${manifestRes.status}`);
-                
-                let files;
-                try { files = await manifestRes.json(); } catch(e) { throw new Error("JSON corrupto en manifest."); }
-                
-                if(!Array.isArray(files)) throw new Error("Formato inválido en manifest.");
-                log(`Manifest OK. ${files.length} archivos.`, 'success');
+                if(!manifestRes.ok) throw new Error("No se encontró manifest.json");
+                const files = await manifestRes.json();
 
                 let count = 0;
                 for(const fileName of files) {
-                    log(`Bajando: ${fileName}...`);
+                    log(`Descargando: ${fileName}...`);
                     const safeName = encodeURIComponent(fileName);
                     const fRes = await fetch(`fuentes/${safeName}`);
                     
-                    if(!fRes.ok) {
-                        log(`Error ${fRes.status} en ${fileName}`, 'error');
-                        continue;
-                    }
+                    if(!fRes.ok) { log(`Error ${fRes.status}: ${fileName}`, 'error'); continue; }
 
                     const blob = await fRes.blob();
-                    log(`Procesando ${fileName}...`);
-                    
                     let text = "";
-                    const lowerName = fileName.toLowerCase();
-                    if(lowerName.endsWith('.pdf')) text = await extractTextFromPDF(blob);
-                    else if(lowerName.endsWith('.docx')) text = await extractTextFromDOCX(blob);
+                    const lower = fileName.toLowerCase();
+                    if(lower.endsWith('.pdf')) text = await extractTextFromPDF(blob);
+                    else if(lower.endsWith('.docx')) text = await extractTextFromDOCX(blob);
                     else text = await extractTextFromPDF(blob); 
                     
                     await window.saveDoc(fileName, text, 'server');
-                    log(`OK: ${fileName}`, 'success');
                     count++;
                 }
-
-                log(`FIN. ${count} archivos guardados.`, 'success');
+                log(`Completado. ${count} archivos.`, 'success');
                 await refreshDocsUI();
-                setTimeout(() => area.classList.add('hidden'), 5000);
-
+                setTimeout(() => area.classList.add('hidden'), 3000);
             } catch(e) {
-                log(`ERROR CRÍTICO: ${e.message}`, 'error');
                 alert("Error Sync: " + e.message);
             } finally {
                 loader.classList.add('hidden');
@@ -521,17 +565,14 @@
                 
                 list.innerHTML = '';
                 docs.forEach(d => {
-                    const color = d.source === 'server' ? 'text-purple-500' : 'text-green-500';
-                    list.innerHTML += `<li class="p-2 text-sm border-b flex justify-between"><span class="${color} font-bold">${d.name}</span> <span class="text-xs text-gray-400 uppercase">${d.source}</span></li>`;
+                    list.innerHTML += `<li class="p-2 text-sm border-b flex justify-between"><span class="text-green-500 font-bold">${d.name}</span> <span class="text-xs text-gray-400 uppercase">${d.source}</span></li>`;
                 });
 
                 getEl('btnToStep2').disabled = false;
                 getEl('btnToStep2').classList.remove('opacity-50', 'cursor-not-allowed');
                 enableStep(2);
-                
-                const hasServer = docs.some(d => d.source === 'server');
-                badge.textContent = hasServer ? "Conectado" : "Local";
-                badge.className = hasServer ? "text-[10px] bg-purple-100 text-purple-600 px-2 py-1 rounded border font-bold" : "text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded border";
+                badge.textContent = "Conectado";
+                badge.className = "text-[10px] bg-purple-100 text-purple-600 px-2 py-1 rounded border font-bold";
             }
         }
 
@@ -550,45 +591,23 @@
 
         // --- UI HANDLERS ---
         function goToStep2() {
-            const k = getEl('apiKeyInput').value.trim();
-            if(!k) return alert("Falta API Key");
-            // AUTO-UPDATE KEY IN STATE IF MISSING
-            state.apiKey = k;
-            localStorage.setItem('ciso_key', k); 
+            if(!state.apiKey) return alert("Configura la IA primero.");
             showStep(2);
         }
 
         window.checkStep2Readiness = function() {
             const files = getEl('questionFiles').files;
             const text = getEl('manualQuestionText').value.trim();
+            const hasFiles = files.length > 0;
             
-            if(files.length > 0) {
-                getEl('selectedQuestionsFiles').textContent = Array.from(files).map(x=>x.name).join(', ');
-                getEl('selectedQuestionsFiles').classList.remove('hidden');
-            } else {
-                getEl('selectedQuestionsFiles').classList.add('hidden');
-            }
-
-            if(files.length > 0 || text.length > 0) {
-                getEl('btnAnalyze').classList.remove('hidden');
-            } else {
-                getEl('btnAnalyze').classList.add('hidden');
-            }
+            getEl('selectedQuestionsFiles').textContent = hasFiles ? Array.from(files).map(x=>x.name).join(', ') : '';
+            getEl('selectedQuestionsFiles').className = hasFiles ? "mt-2 text-xs text-slate-500 font-mono text-center" : "hidden";
+            
+            if(hasFiles || text.length > 0) getEl('btnAnalyze').classList.remove('hidden');
+            else getEl('btnAnalyze').classList.add('hidden');
         };
 
         async function extractQuestions() {
-            // AUTH CHECK BEFORE STARTING
-            if(!state.apiKey) {
-                const inputKey = getEl('apiKeyInput').value.trim();
-                if(inputKey) {
-                    state.apiKey = inputKey;
-                    localStorage.setItem('ciso_key', inputKey);
-                } else {
-                    alert("Por favor ingresa tu API Key en la configuración antes de analizar.");
-                    return;
-                }
-            }
-
             const files = getEl('questionFiles').files;
             const manualText = getEl('manualQuestionText').value.trim();
             
@@ -597,7 +616,6 @@
             
             try {
                 let txt = "";
-                
                 for(const f of files) {
                     const ext = f.name.split('.').pop().toLowerCase();
                     if(ext==='pdf') txt += await extractTextFromPDF(f);
@@ -606,23 +624,9 @@
                 }
                 if(manualText) txt += `\n\n--- PREGUNTAS MANUALES ---\n${manualText}\n\n`;
 
-                if(!txt.trim()) throw new Error("No se encontró texto para analizar.");
+                if(!txt.trim()) throw new Error("No hay texto.");
 
-                // PROMPT CORREGIDO PARA ROL CISO Y CONSERVACIÓN DE IDs
-                const prompt = `
-                    ACTÚA COMO UN CISO EXPERTO EN AUDITORÍA. 
-                    Analiza el siguiente texto (que puede ser un cuestionario desordenado) y extrae una lista estructurada de preguntas, controles o requerimientos.
-
-                    REGLA DE ORO SOBRE LOS IDs:
-                    - Conserva EXACTAMENTE la numeración o código original que aparece en el texto (ej: "1.1.2", "A.9.1", "Q23", "REQ-05"). 
-                    - NO inventes una numeración secuencial (1, 2, 3...) si ya existe una en el documento. Esto es vital para la trazabilidad.
-                    - Si no hay numeración visible, entonces sí usa 1, 2, 3...
-
-                    Devuelve SOLO un array JSON válido: [{"id":"ID_ORIGINAL", "text":"Texto completo de la pregunta"}]
-
-                    TEXTO A ANALIZAR: 
-                    ${txt.substring(0,50000)}
-                `;
+                const prompt = `ACTÚA COMO CISO. Extrae preguntas en JSON: [{"id":"1","text":"Pregunta"}]. Respeta IDs originales. TEXTO: ${txt.substring(0,50000)}`;
                 
                 trackRequest(Math.ceil(prompt.length/4));
                 const res = await callGemini(prompt, true);
@@ -637,7 +641,7 @@
                 getEl('extractingLoader').classList.add('hidden');
                 getEl('questionsListArea').classList.remove('hidden');
                 getEl('btnToStep3').classList.remove('hidden');
-            } catch(e) { alert(e.message); console.error(e); getEl('extractingLoader').classList.add('hidden'); getEl('btnAnalyze').classList.remove('hidden'); }
+            } catch(e) { alert(e.message); getEl('extractingLoader').classList.add('hidden'); getEl('btnAnalyze').classList.remove('hidden'); }
         }
 
         function updateQuestionsUI() {
@@ -646,13 +650,6 @@
             state.questions.forEach(q => l.innerHTML+=`<div class="flex gap-2 text-xs p-1 border-b"><b class="text-intiza-blue min-w-[30px]">${q.id}</b> <span>${q.text}</span></div>`);
         }
         
-        function updateCounterUI() {
-             const total = state.questions.length;
-             const done = state.questions.filter(q => q.status === 'done').length;
-             const counter = document.getElementById('qCounterDisplay');
-             if(counter) counter.textContent = `${done} / ${total}`;
-        }
-
         // --- EXECUTION ---
         async function startQueueProcessing() {
             showStep(3); state.processing=true; state.abort=new AbortController();
@@ -675,26 +672,11 @@
                 await sleep(API_DELAY_MS); 
 
                 try {
-                    // --- PROMPT CISO DEFINITIVO + DEEP SEARCH + 20 SENTENCES LIMIT + BOLD ---
                     const prompt = `
-                        ROL: Actúa como el **CISO de INTIZA**. Estás respondiendo un cuestionario de **Due Diligence** o Auditoría de Seguridad de un **Cliente Corporativo**. 
-                        Tu objetivo es transmitir confianza, profesionalismo y solvencia técnica.
-                        
-                        INSTRUCCIONES DE BÚSQUEDA (Deep Search):
-                        1. NO te quedes con la primera coincidencia. Muchos temas se mencionan en una "Política" general pero se detallan en un "Procedimiento" técnico.
-                        2. Lee TODOS los documentos del contexto.
-                        3. Si encuentras una contradicción, prioriza el documento más específico o reciente.
-                        
-                        FORMATO DE RESPUESTA:
-                        - Respuesta en ESPAÑOL, precisa y directa.
-                        - LÍMITE DE LONGITUD: Máximo 20 oraciones. Sé conciso pero riguroso.
-                        - Justifica CADA afirmación citando la fuente: "Según la Política [Nombre], sección [X]...".
-                        - IMPORTANTE: Pon el nombre del documento y la sección siempre en **negrita** (usando asteriscos dobles).
-                        - Evita ser evasivo; usa terminología estándar (ISO 27001, NIST).
-                        
-                        CONTEXTO (Fuentes): 
-                        """${state.sourceText.substring(0, 1000000)}"""
-                        
+                        ROL: CISO de INTIZA. Responde Due Diligence.
+                        INSTRUCCIONES: Búsqueda Profunda en todos los docs. Prioriza específicos.
+                        FORMATO: Español. Máx 20 oraciones. Cita fuentes en **negrita**.
+                        CONTEXTO: """${state.sourceText.substring(0, 1000000)}"""
                         PREGUNTA: "${q.text}"
                     `;
                     
@@ -702,20 +684,13 @@
                     const ans = await askGeminiWithRetry(prompt, "", state.abort.signal);
                     
                     q.status='done'; q.answer=ans; 
-                    await window.saveQ(q); 
-                    renderCard(card,q);
-                    updateCounterUI();
-                    
+                    await window.saveQ(q); renderCard(card,q); updateCounterUI();
                 } catch(e) {
                     if(e.name==='AbortError') break;
                     q.attempts++;
-                    
-                    q.status='error'; 
-                    q.answer="Error: "+e.message; 
+                    q.status='error'; q.answer="Error: "+e.message; 
                     if(card) card.classList.add('border-red-500'); 
-                    
-                    await window.saveQ(q);
-                    updateCounterUI();
+                    await window.saveQ(q); updateCounterUI();
                 }
                 if(card) card.classList.remove('border-intiza-blue','shadow-md');
             }
@@ -727,7 +702,6 @@
 
         function stopProcessing() { if(state.abort) state.abort.abort(); state.processing=false; }
 
-        // --- RENDERING ---
         function renderResultsUI() {
             const c = getEl('resultsContainer'); c.innerHTML = '';
             state.questions.forEach(q => {
@@ -755,64 +729,36 @@
             const fb = getEl(`tx-${id}`).value; const q = state.questions.find(x=>x.id===id);
             getEl(`fb-${id}`).classList.add('hidden');
             const c = getEl(`card-${id}`); c.querySelector('.ans-body').innerHTML='<i class="fas fa-spin fa-sync"></i>';
-            
-            const p = `ROL: CISO Senior. TAREA: Corregir respuesta anterior. PREGUNTA: "${q.text}" ERROR REPORTADO: "${fb}". INSTRUCCIÓN: Revisa exhaustivamente TODAS las fuentes nuevamente. LÍMITE: Máximo 20 oraciones. FORMATO: Usa **negrita** para citar nombres de documentos y secciones. FUENTES: ${state.sourceText.substring(0,1000000)}`;
-            
-            trackRequest(Math.ceil(p.length/4));
-            await sleep(API_DELAY_MS); 
-            
+            const p = `CISO MODE. PREGUNTA: "${q.text}" ERROR: "${fb}". CORRIGE: ${state.sourceText.substring(0,40000)}`;
             try {
                  q.answer = await askGeminiWithRetry(p, "", null); 
-                 q.status='done'; 
-                 await window.saveQ(q); 
-                 renderCard(c,q);
-                 updateCounterUI();
-            } catch(e) {
-                alert(e.message);
-            }
+                 q.status='done'; await window.saveQ(q); renderCard(c,q); updateCounterUI();
+            } catch(e) { alert(e.message); }
         };
 
         async function askGeminiWithRetry(qText, ctx, sig) {
-            // Get user selected model OR default if null
-            const modelToUse = state.model || DEFAULT_MODEL;
-            
-            // Logic for Deep Search is inside qText if ctx is empty (reproc case) 
-            // or constructed here if ctx is present (normal flow) -- BUT we construct it upstream now.
-            // So we just pass qText if ctx is empty.
             const p = ctx ? qText : qText; 
-            
             let attempts = 0;
-            while(attempts < 5) {
+            while(attempts < 3) {
                 try {
-                    return await callGemini(p, false, sig, modelToUse);
+                    return await callGemini(p, false, sig);
                 } catch(e) {
-                    // Detect Overloaded
                     if(e.message.includes('503') || e.message.includes('Overloaded')) {
-                        attempts++;
-                        const wait = Math.pow(2, attempts) * 2000; // 2s, 4s, 8s...
-                        console.warn(`Modelo Saturado. Reintentando en ${wait/1000}s...`);
-                        const prog = getEl('progressStats');
-                        if(prog) prog.textContent = `Saturado. Esperando ${wait/1000}s...`;
-                        
-                        await sleep(wait);
-                        continue;
+                        attempts++; await sleep(2000*attempts); continue;
                     }
-                    throw e; // Throw other errors immediately
+                    throw e; 
                 }
             }
-            throw new Error("Servidor ocupado tras 5 intentos.");
+            throw new Error("Servidor ocupado.");
         }
 
-        async function callGemini(text, json, signal, modelOverride) {
-            const m = modelOverride || state.model || DEFAULT_MODEL;
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${state.apiKey}`;
+        async function callGemini(text, json, signal) {
+            // USAR EL MODELO DETECTADO O POR DEFECTO
+            const activeModel = state.model || "gemini-1.5-flash";
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${state.apiKey}`;
             const body = { contents:[{parts:[{text}]}] }; if(json) body.generationConfig={responseMimeType:"application/json"};
             const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body), signal });
-            
-            if(!r.ok) {
-                const err = await r.json();
-                throw new Error(err.error?.message || r.statusText);
-            }
+            if(!r.ok) { const err = await r.json(); throw new Error(err.error?.message || r.statusText); }
             return (await r.json()).candidates[0].content.parts[0].text;
         }
 
