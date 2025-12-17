@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v8.6 (Stable Extended)</title>
+    <title>INTIZA CISO AI OFFICER v8.7 (Next Gen Support)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -76,7 +76,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-white opacity-90">MODO CORPORATIVO</div>
-                    <div class="text-blue-200 text-[10px]">v8.6 Stable Extended</div>
+                    <div class="text-blue-200 text-[10px]">v8.7 Next Gen Support</div>
                 </div>
             </div>
         </div>
@@ -342,16 +342,15 @@
         const TPM_LIMIT = 4000000; 
         const WINDOW_MS = 60000; 
 
-        // LISTA DE CANDIDATOS PARA AUTO-DETECCIÓN (SOLO ESTABLES/GA)
-        // Se incluyen explícitamente las versiones 001, 002 y flash-8b para asegurar compatibilidad
+        // LISTA DE CANDIDATOS PARA AUTO-DETECCIÓN (INCLUYE NUEVAS GENERACIONES)
         const MODEL_CANDIDATES = [
-            "gemini-1.5-flash",         // Alias más común
-            "gemini-1.5-flash-001",     // Estable anterior (muy robusta)
-            "gemini-1.5-flash-002",     // Estable reciente
-            "gemini-1.5-flash-8b",      // Versión ligera eficiente
-            "gemini-1.5-pro",           // Alias Pro
-            "gemini-1.5-pro-001",       // Pro Estable anterior
-            "gemini-1.5-pro-002"        // Pro Estable reciente
+            "gemini-2.5-flash",       // Nueva generación veloz (Probable prioridad usuario)
+            "gemini-2.0-flash",       // Generación anterior inmediata
+            "gemini-1.5-flash",       // Estable clásica (Backup)
+            "gemini-1.5-flash-002",   // Estable reciente
+            "gemini-1.5-flash-8b",    // Ligera
+            "gemini-2.5-pro",         // Nueva generación potente
+            "gemini-1.5-pro"          // Estable potente (Backup)
         ];
 
         function log(msg, type='info') {
