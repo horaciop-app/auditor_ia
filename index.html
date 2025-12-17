@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v8.7 (Next Gen Support)</title>
+    <title>INTIZA CISO AI OFFICER v8.8 (Batch 5s Delay)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -76,7 +76,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-white opacity-90">MODO CORPORATIVO</div>
-                    <div class="text-blue-200 text-[10px]">v8.7 Next Gen Support</div>
+                    <div class="text-blue-200 text-[10px]">v8.8 Batch 5s Delay</div>
                 </div>
             </div>
         </div>
@@ -337,20 +337,20 @@
 
     <script>
         // --- UTILS & CONFIG ---
-        const API_DELAY_MS = 1000; 
+        const API_DELAY_MS = 5000; // INCREASED DELAY FOR STABILITY (5 SECONDS)
         const RPM_LIMIT = 2000; 
         const TPM_LIMIT = 4000000; 
         const WINDOW_MS = 60000; 
 
         // LISTA DE CANDIDATOS PARA AUTO-DETECCIÓN (INCLUYE NUEVAS GENERACIONES)
         const MODEL_CANDIDATES = [
-            "gemini-2.5-flash",       // Nueva generación veloz (Probable prioridad usuario)
-            "gemini-2.0-flash",       // Generación anterior inmediata
-            "gemini-1.5-flash",       // Estable clásica (Backup)
-            "gemini-1.5-flash-002",   // Estable reciente
-            "gemini-1.5-flash-8b",    // Ligera
-            "gemini-2.5-pro",         // Nueva generación potente
-            "gemini-1.5-pro"          // Estable potente (Backup)
+            "gemini-2.5-flash",       
+            "gemini-2.0-flash",       
+            "gemini-1.5-flash",       
+            "gemini-1.5-flash-002",   
+            "gemini-1.5-flash-8b",    
+            "gemini-2.5-pro",         
+            "gemini-1.5-pro"          
         ];
 
         function log(msg, type='info') {
@@ -837,7 +837,7 @@
             }
         }
 
-        // --- EXECUTION ---
+        // --- EXECUTION (MODIFIED FOR BATCHING) ---
         async function startQueueProcessing() {
             showStep(3); state.processing=true; state.abort=new AbortController();
             getEl('btnStop').classList.remove('hidden');
@@ -846,8 +846,17 @@
             updateCounterUI();
             
             const pending = state.questions.filter(q => q.status==='pending'||q.status==='retry');
+            
+            // CONFIGURACIÓN DE LOTES
+            const BATCH_SIZE = 5;
+            let processedInBatch = 0;
+
             for(const q of pending) {
                 if(!state.processing) break;
+
+                // Lógica de Lote
+                processedInBatch++;
+
                 const card = getEl(`card-${q.id}`);
                 if(card) {
                     card.scrollIntoView({behavior:'smooth',block:'center'});
@@ -893,6 +902,16 @@
                     await window.saveQ(q); updateCounterUI();
                 }
                 if(card) card.classList.remove('border-intiza-blue','shadow-md');
+
+                // Pausa entre lotes (Batch Cooling)
+                if (processedInBatch >= BATCH_SIZE) {
+                    const stats = getEl('progressStats');
+                    const originalText = stats.textContent;
+                    stats.innerHTML = `<span class="text-orange-500 font-bold"><i class="fas fa-coffee"></i> Enfriando motor (Pausa de seguridad)...</span>`;
+                    await sleep(3000); // 3 segundos extra
+                    stats.textContent = originalText;
+                    processedInBatch = 0; // Reiniciar contador
+                }
             }
             state.processing=false;
             getEl('btnStop').classList.add('hidden');
