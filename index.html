@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v8.3 (Smart IDs)</title>
+    <title>INTIZA CISO AI OFFICER v8.5 (Stable Production)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -76,7 +76,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-white opacity-90">MODO CORPORATIVO</div>
-                    <div class="text-blue-200 text-[10px]">v8.3 Smart IDs</div>
+                    <div class="text-blue-200 text-[10px]">v8.5 Stable Production</div>
                 </div>
             </div>
         </div>
@@ -342,14 +342,12 @@
         const TPM_LIMIT = 4000000; 
         const WINDOW_MS = 60000; 
 
-        // LISTA DE CANDIDATOS PARA AUTO-DETECCIÓN
+        // LISTA DE CANDIDATOS PARA AUTO-DETECCIÓN (SOLO ESTABLES/GA)
         const MODEL_CANDIDATES = [
-            "gemini-1.5-flash",
-            "gemini-1.5-flash-001",    
-            "gemini-1.5-flash-002",    
-            "gemini-2.0-flash-exp",    
-            "gemini-1.5-pro",          
-            "gemini-2.5-flash-preview-09-2025" 
+            "gemini-1.5-flash",      // Versión estable actual (alias) - Prioridad Velocidad
+            "gemini-1.5-flash-002",  // Versión estable específica reciente
+            "gemini-1.5-pro",        // Versión estable potente (Backup)
+            "gemini-1.5-pro-002"     // Versión estable potente reciente
         ];
 
         function log(msg, type='info') {
@@ -664,7 +662,6 @@
             const btn = getEl('btnAnalyze');
             const listArea = getEl('questionsListArea');
             const btnStep3 = getEl('btnToStep3');
-            // Referencia al texto del loader para actualizarlo
             const loaderTextSpan = loader.querySelector('span');
             
             loader.classList.remove('hidden');
@@ -684,33 +681,34 @@
                 const fullText = txt.trim();
                 if(!fullText) throw new Error("No hay texto para analizar.");
 
-                // 2. Estrategia de Fragmentación (Chunking)
-                const CHUNK_SIZE = 25000; // ~6k tokens, seguro para respuestas completas
+                const CHUNK_SIZE = 25000;
                 const chunks = [];
                 for (let i = 0; i < fullText.length; i += CHUNK_SIZE) {
                     chunks.push(fullText.substring(i, i + CHUNK_SIZE));
                 }
 
-                log(`Texto dividido en ${chunks.length} bloques para análisis.`, 'info');
+                log(`Texto dividido en ${chunks.length} bloques.`, 'info');
 
                 let allQs = [];
                 let globalIdCounter = 1;
+                // NEW: Use Set to track unique question texts (normalized)
+                const seenTexts = new Set();
 
-                // 3. Procesar bloques secuencialmente
+                // 3. Procesar bloques
                 for (let i = 0; i < chunks.length; i++) {
                     loaderTextSpan.textContent = `Analizando bloque ${i + 1} de ${chunks.length}...`;
                     const chunk = chunks[i];
                     
-                    // Prompt adaptado para bloques con manejo inteligente de IDs
-                    const prompt = `ACTÚA COMO CISO. Tu tarea es identificar y extraer PREGUNTAS de auditoría o cuestionarios de seguridad.
+                    // PROMPT REFINED: Strict Security & Compliance Focus
+                    const prompt = `ACTÚA COMO CISO. Identifica y extrae EXCLUSIVAMENTE preguntas de CUMPLIMIENTO, AUDITORÍA o SEGURIDAD (Due Diligence).
                     
-                    INSTRUCCIONES:
-                    1. Analiza el siguiente texto parcial (Bloque ${i+1}/${chunks.length}).
-                    2. Extrae TODAS las preguntas que encuentres.
-                    3. Devuelve un JSON estrictamente válido: [{"id":"ID_ORIGINAL","text":"Texto de la pregunta"}].
-                    4. IMPORTANTE: Preserva el ID original del documento (ej: "1.1", "A.1.2", "Q5") en el campo "id".
-                    5. Si las preguntas NO tienen numeración en el texto, genera IDs numéricos comenzando desde el número ${globalIdCounter}.
-                    6. Ignora respuestas, solo extrae las preguntas.
+                    INSTRUCCIONES ESTRICTAS:
+                    1. Analiza el texto parcial (Bloque ${i+1}/${chunks.length}).
+                    2. Extrae preguntas que requieran evidencia, cumplimiento (Si/No) o explicación de control.
+                    3. IGNORA: Preguntas retóricas, títulos que parecen preguntas, instrucciones generales, o preguntas repetidas.
+                    4. Devuelve JSON válido: [{"id":"ID_LITERAL","text":"Texto de la pregunta"}].
+                    5. ID: Usa el ID exacto del documento (ej: "1.2", "A.5.1", "Q-1"). Si no hay ID visible al inicio de la línea, usa null.
+                    6. TEXTO: Limpia el texto de la pregunta (quita números pegados al inicio).
                     
                     TEXTO:
                     ${chunk}`;
@@ -719,7 +717,6 @@
                         trackRequest(Math.ceil(prompt.length/4));
                         const res = await callGemini(prompt, true); 
 
-                        // Parseo Robusto de JSON
                         let cleanJson = res.replace(/```json|```/g, '').trim();
                         const first = cleanJson.indexOf('[');
                         if(first !== -1) cleanJson = cleanJson.substring(first);
@@ -729,58 +726,53 @@
                             chunkQs = JSON.parse(cleanJson);
                         } catch(e) {
                             console.warn(`Error parseando bloque ${i+1}. Intentando recuperar...`, e);
-                            
-                            // Recuperación 1: Intentar cerrar el array si se cortó
                             let salvagedJson = cleanJson;
                             const lastClosingObj = cleanJson.lastIndexOf('}');
-                            
                             if (lastClosingObj !== -1 && cleanJson.substring(lastClosingObj).indexOf(']') === -1) {
                                 salvagedJson = cleanJson.substring(0, lastClosingObj + 1) + ']';
                             } else if (!cleanJson.endsWith(']')) {
                                  salvagedJson += ']';
                             }
-
-                            try {
-                                chunkQs = JSON.parse(salvagedJson);
-                                log(`Bloque ${i+1} recuperado parcialmente.`, 'warning');
-                            } catch (e2) {
-                                log(`Falló recuperación del bloque ${i+1}. Se omitirá. Error: ${e2.message}`, 'error');
-                                chunkQs = []; // Si falla todo, saltamos el bloque
-                            }
+                            try { chunkQs = JSON.parse(salvagedJson); } catch (e2) { chunkQs = []; }
                         }
 
-                        // Procesar IDs (Respetar original o usar contador)
+                        // Procesar IDs y Duplicados
                         if (Array.isArray(chunkQs)) {
                             chunkQs.forEach(q => {
-                                // Si no trajo ID, le asignamos uno del contador global
-                                if(!q.id || q.id.trim() === '') {
-                                    q.id = String(globalIdCounter++);
-                                }
+                                // Normalización para detectar duplicados (lowercase + trim)
+                                const normText = q.text ? q.text.toLowerCase().trim() : "";
                                 
-                                // INTELIGENCIA: Si la IA devolvió un ID numérico (ej: "5"), 
-                                // actualizamos nuestro contador global para que el siguiente bloque empiece en "6".
-                                const parsedId = parseInt(q.id);
-                                if (!isNaN(parsedId) && parsedId >= globalIdCounter) {
-                                    globalIdCounter = parsedId + 1;
-                                }
+                                if (normText.length > 5 && !seenTexts.has(normText)) {
+                                    seenTexts.add(normText);
 
-                                allQs.push(q);
+                                    // Lógica de IDs mejorada
+                                    if(!q.id || q.id === 'null' || q.id.trim() === '') {
+                                        q.id = String(globalIdCounter++);
+                                    } else {
+                                        // Si viene un ID literal, confiamos en él.
+                                        // Intentamos ver si es numérico para actualizar el contador, 
+                                        // pero NO sobrescribimos si es complejo (ej: A.1)
+                                        const parsedId = parseInt(q.id);
+                                        if (!isNaN(parsedId) && String(parsedId) === q.id) {
+                                            // Es puramente numérico (ej: "5"), actualizamos contador
+                                            if (parsedId >= globalIdCounter) globalIdCounter = parsedId + 1;
+                                        }
+                                    }
+                                    allQs.push(q);
+                                }
                             });
                         }
 
                     } catch (e) {
-                         log(`Error API procesando bloque ${i+1}: ${e.message}. Continuando con el siguiente.`, 'error');
+                         log(`Error API bloque ${i+1}: ${e.message}`, 'error');
                     }
-                    
-                    // Pausa de cortesía para la API
                     await sleep(500);
                 } 
 
-                if(allQs.length === 0) throw new Error("No se pudieron extraer preguntas de ningún bloque.");
+                if(allQs.length === 0) throw new Error("No se extrajeron preguntas.");
 
                 loaderTextSpan.textContent = "Finalizando...";
 
-                // 4. Guardar y Actualizar UI
                 const finalQs = allQs.map(q=>({...q, status:'pending', attempts:0}));
                 await dbOp('readwrite', STORE_QUESTIONS, s => s.clear());
                 for(const q of finalQs) await window.saveQ(q);
@@ -789,10 +781,10 @@
                 loader.classList.add('hidden');
                 listArea.classList.remove('hidden');
                 btnStep3.classList.remove('hidden');
-                log(`Análisis completado. ${finalQs.length} preguntas extraídas en total.`, 'success');
+                log(`Análisis finalizado. ${finalQs.length} preguntas únicas extraídas.`, 'success');
 
             } catch(e) { 
-                alert("Error en el análisis: " + e.message); 
+                alert("Error: " + e.message); 
                 loader.classList.add('hidden'); 
                 btn.classList.remove('hidden'); 
                 loaderTextSpan.textContent = "Analizando...";
