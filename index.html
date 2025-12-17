@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v8.5 (Stable Production)</title>
+    <title>INTIZA CISO AI OFFICER v8.6 (Stable Extended)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -76,7 +76,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-white opacity-90">MODO CORPORATIVO</div>
-                    <div class="text-blue-200 text-[10px]">v8.5 Stable Production</div>
+                    <div class="text-blue-200 text-[10px]">v8.6 Stable Extended</div>
                 </div>
             </div>
         </div>
@@ -343,11 +343,15 @@
         const WINDOW_MS = 60000; 
 
         // LISTA DE CANDIDATOS PARA AUTO-DETECCIÓN (SOLO ESTABLES/GA)
+        // Se incluyen explícitamente las versiones 001, 002 y flash-8b para asegurar compatibilidad
         const MODEL_CANDIDATES = [
-            "gemini-1.5-flash",      // Versión estable actual (alias) - Prioridad Velocidad
-            "gemini-1.5-flash-002",  // Versión estable específica reciente
-            "gemini-1.5-pro",        // Versión estable potente (Backup)
-            "gemini-1.5-pro-002"     // Versión estable potente reciente
+            "gemini-1.5-flash",         // Alias más común
+            "gemini-1.5-flash-001",     // Estable anterior (muy robusta)
+            "gemini-1.5-flash-002",     // Estable reciente
+            "gemini-1.5-flash-8b",      // Versión ligera eficiente
+            "gemini-1.5-pro",           // Alias Pro
+            "gemini-1.5-pro-001",       // Pro Estable anterior
+            "gemini-1.5-pro-002"        // Pro Estable reciente
         ];
 
         function log(msg, type='info') {
@@ -433,6 +437,8 @@
             
             for (const model of MODEL_CANDIDATES) {
                 msg.textContent = `Probando: ${model}...`;
+                // Pequeño delay para no saturar la key durante la prueba
+                await sleep(300); 
                 const works = await testModelConnection(key, model);
                 if (works) {
                     foundModel = model;
