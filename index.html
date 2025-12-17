@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v8.2 (Auto-Chunking)</title>
+    <title>INTIZA CISO AI OFFICER v8.3 (Smart IDs)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -76,7 +76,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-white opacity-90">MODO CORPORATIVO</div>
-                    <div class="text-blue-200 text-[10px]">v8.2 Auto-Chunking</div>
+                    <div class="text-blue-200 text-[10px]">v8.3 Smart IDs</div>
                 </div>
             </div>
         </div>
@@ -701,15 +701,16 @@
                     loaderTextSpan.textContent = `Analizando bloque ${i + 1} de ${chunks.length}...`;
                     const chunk = chunks[i];
                     
-                    // Prompt adaptado para bloques
+                    // Prompt adaptado para bloques con manejo inteligente de IDs
                     const prompt = `ACTÚA COMO CISO. Tu tarea es identificar y extraer PREGUNTAS de auditoría o cuestionarios de seguridad.
                     
                     INSTRUCCIONES:
                     1. Analiza el siguiente texto parcial (Bloque ${i+1}/${chunks.length}).
                     2. Extrae TODAS las preguntas que encuentres.
-                    3. Devuelve un JSON estrictamente válido: [{"id":"1","text":"Texto de la pregunta"}].
-                    4. Si las preguntas tienen numeración original (ej: "1.2.3 Política"), inclúyela dentro del campo "text".
-                    5. Ignora respuestas, solo extrae las preguntas.
+                    3. Devuelve un JSON estrictamente válido: [{"id":"ID_ORIGINAL","text":"Texto de la pregunta"}].
+                    4. IMPORTANTE: Preserva el ID original del documento (ej: "1.1", "A.1.2", "Q5") en el campo "id".
+                    5. Si las preguntas NO tienen numeración en el texto, genera IDs numéricos comenzando desde el número ${globalIdCounter}.
+                    6. Ignora respuestas, solo extrae las preguntas.
                     
                     TEXTO:
                     ${chunk}`;
@@ -748,10 +749,21 @@
                             }
                         }
 
-                        // Reasignar IDs secuenciales
+                        // Procesar IDs (Respetar original o usar contador)
                         if (Array.isArray(chunkQs)) {
                             chunkQs.forEach(q => {
-                                q.id = String(globalIdCounter++);
+                                // Si no trajo ID, le asignamos uno del contador global
+                                if(!q.id || q.id.trim() === '') {
+                                    q.id = String(globalIdCounter++);
+                                }
+                                
+                                // INTELIGENCIA: Si la IA devolvió un ID numérico (ej: "5"), 
+                                // actualizamos nuestro contador global para que el siguiente bloque empiece en "6".
+                                const parsedId = parseInt(q.id);
+                                if (!isNaN(parsedId) && parsedId >= globalIdCounter) {
+                                    globalIdCounter = parsedId + 1;
+                                }
+
                                 allQs.push(q);
                             });
                         }
