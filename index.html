@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v7.1 (Enterprise Turbo)</title>
+    <title>INTIZA CISO AI OFFICER v7.2 (Auth Fix)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -81,7 +81,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-white opacity-90">MODO ENTERPRISE</div>
-                    <div class="text-blue-200 text-[10px]">v7.1</div>
+                    <div class="text-blue-200 text-[10px]">v7.2</div>
                 </div>
             </div>
         </div>
@@ -313,10 +313,8 @@
 
     <script>
         // --- UTILS & CONFIG ---
-        // AHORA SÍ: Modelo 1.5 Flash estable para cuentas de pago
-        const GEMINI_MODEL = "gemini-1.5-flash"; 
-        // DELAY TURBO: 1 segundo (posible gracias a la licencia)
-        const API_DELAY_MS = 1000; 
+        const GEMINI_MODEL = "gemini-1.5-flash"; // AHORA SÍ: MODELO DE PAGO ESTÁNDAR
+        const API_DELAY_MS = 1000; // DELAY REDUCIDO A 1 SEGUNDO (TURBO)
         
         // --- LIMITS CONSTANTS (ENTERPRISE) ---
         const RPM_LIMIT = 2000; 
@@ -387,23 +385,37 @@
             const rpm = state.requestLog.length;
             const tpm = state.requestLog.reduce((acc, req) => acc + req.tokens, 0);
             
-            const rpmEl = getEl('rpmVal');
-            if(rpmEl) rpmEl.textContent = rpm;
+            let timeToFree = 0;
+            if (state.requestLog.length > 0) {
+                const oldest = state.requestLog[0].time;
+                timeToFree = Math.max(0, Math.ceil((WINDOW_MS - (now - oldest)) / 1000));
+            }
 
+            const rpmEl = getEl('rpmVal');
+            if (rpmEl) rpmEl.textContent = rpm;
+            
             const rpmBar = getEl('rpmBar');
-            if(rpmBar) {
+            if (rpmBar) {
                 rpmBar.style.width = `${Math.min((rpm/RPM_LIMIT)*100, 100)}%`;
                 if(rpm > RPM_LIMIT*0.8) rpmBar.className = "bg-red-500 h-1.5 rounded-full transition-all duration-300";
                 else rpmBar.className = "bg-blue-500 h-1.5 rounded-full transition-all duration-300";
             }
 
             const tpmEl = getEl('tpmVal');
-            if(tpmEl) tpmEl.textContent = tpm.toLocaleString();
+            if (tpmEl) tpmEl.textContent = tpm.toLocaleString();
             
             const tpmBar = getEl('tpmBar');
-            if(tpmBar) tpmBar.style.width = `${Math.min((tpm/TPM_LIMIT)*100, 100)}%`;
+            if (tpmBar) tpmBar.style.width = `${Math.min((tpm/TPM_LIMIT)*100, 100)}%`;
+
+            const resetTimer = getEl('resetTimer');
+            if (resetTimer) {
+                resetTimer.textContent = timeToFree + "s";
+                if(timeToFree > 0) resetTimer.className = "text-lg font-mono font-bold text-orange-600 mt-1";
+                else resetTimer.className = "text-lg font-mono font-bold text-green-600 mt-1";
+            }
         }
-        
+        setInterval(updateMonitorUI, 1000);
+
         // --- INIT ---
         window.onload = async function() {
             if(state.apiKey) getEl('apiKeyInput').value = state.apiKey;
@@ -421,8 +433,6 @@
             if(window.location.protocol === 'file:') {
                  log("ERROR: Modo local file:// detectado. La sincronización no funcionará.", 'error');
             }
-            
-            setInterval(updateMonitorUI, 1000);
         };
 
         // --- KEY MANAGEMENT ---
@@ -504,6 +514,25 @@
             }
         };
         
+        function updateTokenMeter() {
+            const textLength = state.sourceText.length;
+            const estimatedTokens = Math.ceil(textLength / 4); 
+            const maxTokens = 1000000; 
+            const percentage = Math.min((estimatedTokens / maxTokens) * 100, 100);
+            
+            const bar = document.getElementById('tokenProgressBar');
+            const display = document.getElementById('tokenCountDisplay');
+            
+            if(bar && display) {
+                bar.style.width = percentage + '%';
+                if(percentage > 90) bar.className = "bg-red-500 h-2.5 rounded-full transition-all duration-500";
+                else if(percentage > 70) bar.className = "bg-orange-500 h-2.5 rounded-full transition-all duration-500";
+                else bar.className = "bg-purple-500 h-2.5 rounded-full transition-all duration-500";
+                
+                display.textContent = `${estimatedTokens.toLocaleString()} / ${maxTokens.toLocaleString()} Tokens`;
+            }
+        }
+
         async function refreshDocsUI() {
             const docs = await window.loadDocs();
             const list = getEl('uploadedFilesList');
@@ -511,6 +540,8 @@
             
             if(docs.length > 0) {
                 state.sourceText = docs.map(d => `\n=== DOC (${d.source}): ${d.name} ===\n${d.content}`).join('\n');
+                getEl('storageSize').textContent = docs.length + " Docs";
+                updateTokenMeter();
                 
                 list.innerHTML = '';
                 docs.forEach(d => {
@@ -525,6 +556,8 @@
                 const hasServer = docs.some(d => d.source === 'server');
                 badge.textContent = hasServer ? "Conectado" : "Local";
                 badge.className = hasServer ? "text-[10px] bg-purple-100 text-purple-600 px-2 py-1 rounded border font-bold" : "text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded border";
+            } else {
+                updateTokenMeter();
             }
         }
 
@@ -545,7 +578,10 @@
         function goToStep2() {
             const k = getEl('apiKeyInput').value.trim();
             if(!k) return alert("Falta API Key");
-            localStorage.setItem('ciso_key', k); state.apiKey = k; showStep(2);
+            // AUTO-UPDATE KEY IN STATE IF MISSING
+            state.apiKey = k;
+            localStorage.setItem('ciso_key', k); 
+            showStep(2);
         }
 
         window.checkStep2Readiness = function() {
@@ -567,6 +603,18 @@
         };
 
         async function extractQuestions() {
+            // AUTH CHECK BEFORE STARTING
+            if(!state.apiKey) {
+                const inputKey = getEl('apiKeyInput').value.trim();
+                if(inputKey) {
+                    state.apiKey = inputKey;
+                    localStorage.setItem('ciso_key', inputKey);
+                } else {
+                    alert("Por favor ingresa tu API Key en la configuración antes de analizar.");
+                    return;
+                }
+            }
+
             const files = getEl('questionFiles').files;
             const manualText = getEl('manualQuestionText').value.trim();
             
@@ -645,7 +693,7 @@
                 if(card) {
                     card.scrollIntoView({behavior:'smooth',block:'center'});
                     card.classList.add('border-intiza-blue','shadow-md');
-                    card.querySelector('.status-ind').innerHTML=`<i class="fas fa-circle-notch fa-spin text-intiza-blue"></i> Analizando...`;
+                    card.querySelector('.status-ind').innerHTML=`<i class="fas fa-circle-notch fa-spin text-intiza-blue"></i> Analizando (Espera ${API_DELAY_MS/1000}s)...`;
                 }
                 getEl('progressStats').textContent=`Analizando ID ${q.id}...`;
                 
@@ -771,7 +819,11 @@
         }
 
         async function callGemini(text, json, signal) {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${state.apiKey}`;
+            // CRITICAL CHECK
+            const key = state.apiKey || getEl('apiKeyInput').value;
+            if(!key) throw new Error("API Key no encontrada. Por favor ingrésala en la configuración.");
+
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`;
             const body = { contents:[{parts:[{text}]}] }; if(json) body.generationConfig={responseMimeType:"application/json"};
             const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body), signal });
             
