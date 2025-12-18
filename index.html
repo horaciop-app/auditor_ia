@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v9.4 (RAG Multi-Source)</title>
+    <title>INTIZA CISO AI OFFICER v10.0 (Pro Suite)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -85,7 +85,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-white opacity-90">MODO CORPORATIVO</div>
-                    <div class="text-green-300 text-[10px] font-mono">v9.4 RAG Multi-Source</div>
+                    <div class="text-green-300 text-[10px] font-mono">v10.0 Pro Suite</div>
                 </div>
             </div>
         </div>
@@ -314,12 +314,34 @@
             </div>
         </div>
 
-        <!-- STEP 3: Results -->
+        <!-- STEP 3: Results (NEW HEADER FOR RESUME & TIMER) -->
         <div id="step3" class="hidden step-content bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <!-- RECOVERY ALERT -->
+            <div id="recoveryAlert" class="hidden mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg flex justify-between items-center shadow-sm">
+                <div class="flex items-center gap-3">
+                    <div class="bg-amber-100 p-2 rounded-full text-amber-600"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div>
+                        <h4 class="font-bold text-amber-800 text-sm">Sesión Interrumpida Detectada</h4>
+                        <p class="text-xs text-amber-700" id="recoveryMsg">Se encontraron preguntas pendientes.</p>
+                    </div>
+                </div>
+                <button onclick="startQueueProcessing()" class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-4 py-2 rounded shadow flex items-center gap-2">
+                    <i class="fas fa-play"></i> REANUDAR AHORA
+                </button>
+            </div>
+
             <div class="flex justify-between items-center mb-4 bg-slate-50 p-3 rounded border border-slate-100 sticky top-0 z-10">
-                <div>
-                    <h2 class="text-lg font-semibold text-slate-800">3. Informe CISO</h2>
-                    <div class="text-xs text-slate-500" id="progressStats">Listo</div>
+                <div class="flex items-center gap-4">
+                    <div>
+                        <h2 class="text-lg font-semibold text-slate-800">3. Informe CISO</h2>
+                        <div class="text-xs text-slate-500" id="progressStats">Listo</div>
+                    </div>
+                    <!-- CLOCK & ETA -->
+                    <div id="timeStats" class="hidden text-xs font-mono text-slate-500 bg-white border px-2 py-1 rounded">
+                        <span id="elapsedTime"><i class="far fa-clock"></i> 00:00</span>
+                        <span class="mx-1 text-slate-300">|</span>
+                        <span id="etaTime" class="text-purple-600">ETA: --:--</span>
+                    </div>
                 </div>
                 
                 <div class="flex items-center gap-3">
@@ -329,9 +351,9 @@
                     </div>
 
                     <div class="flex gap-2">
-                         <button id="btnStop" onclick="stopProcessing()" class="hidden text-xs bg-red-100 text-red-600 border border-red-200 px-3 py-1 rounded font-bold hover:bg-red-200"><i class="fas fa-stop"></i> PAUSAR</button>
-                         <button id="btnResume" onclick="startQueueProcessing()" class="hidden text-xs bg-green-100 text-green-700 border border-green-200 px-3 py-1 rounded font-bold hover:bg-green-200 shadow-md animate-pulse">
-                            <i class="fas fa-play"></i> REANUDAR
+                         <button id="btnStop" onclick="stopProcessing()" class="hidden text-xs bg-red-100 text-red-600 border border-red-200 px-3 py-1 rounded font-bold hover:bg-red-200"><i class="fas fa-pause"></i> PAUSAR</button>
+                         <button id="btnResume" onclick="startQueueProcessing()" class="hidden text-xs bg-green-100 text-green-700 border border-green-200 px-3 py-1 rounded font-bold hover:bg-green-200 shadow-md">
+                            <i class="fas fa-play"></i> CONTINUAR
                          </button>
                     </div>
                 </div>
@@ -370,14 +392,13 @@
 
     <script>
         // --- UTILS & CONFIG ---
-        const API_DELAY_MS = 4000; // Increased delay for safety
-        const RPM_LIMIT = 15; // Conservative RPM
-        const TPM_LIMIT = 1000000; // 1M Token Limit for 2.5 Flash
+        const API_DELAY_MS = 4000; 
+        const RPM_LIMIT = 15; 
+        const TPM_LIMIT = 1000000;
         const WINDOW_MS = 60000; 
         const CHUNK_SIZE = 1000; 
         const CHUNK_OVERLAP = 100;
 
-        // PRIORIDAD: 2.5 FLASH -> 2.0 -> 1.5 (Legacy)
         const MODEL_CANDIDATES = [
             "gemini-2.5-flash",       
             "gemini-2.0-flash",       
@@ -463,7 +484,11 @@
             processing:false, 
             requestLog: [],
             model: localStorage.getItem('ciso_active_model') || '',
-            vectors: [] 
+            vectors: [],
+            // TIME TRACKING
+            startTime: 0,
+            processedCount: 0,
+            timerInterval: null
         };
 
         // --- AUTH & SETUP ---
@@ -510,6 +535,7 @@
             } catch (e) { return false; }
         }
 
+        // --- INIT & PERSISTENCE CHECK ---
         window.onload = async function() {
             if(state.apiKey) {
                 getEl('apiKeyInput').value = state.apiKey;
@@ -532,11 +558,21 @@
             if(qs.length > 0) {
                 state.questions = qs.sort((a,b) => a.id.localeCompare(b.id, undefined, {numeric: true}));
                 updateQuestionsUI(); renderResultsUI(); enableStep(3);
+                
+                // AUTO-RECOVERY LOGIC
                 const pending = state.questions.filter(q => q.status === 'pending' || q.status === 'retry');
-                if(pending.length > 0) {
+                const done = state.questions.filter(q => q.status === 'done');
+                
+                if(pending.length > 0 && done.length > 0) {
+                    // Session interrupted case
+                    getEl('recoveryAlert').classList.remove('hidden');
+                    getEl('recoveryMsg').textContent = `Se detectaron ${done.length} preguntas finalizadas y ${pending.length} pendientes de una sesión anterior.`;
                     getEl('btnResume').classList.remove('hidden');
-                    getEl('progressStats').innerHTML = `<span class="text-amber-600 font-bold"><i class="fas fa-history"></i> Recuperado: ${pending.length} pendientes.</span>`;
+                } else if (pending.length > 0) {
+                    // Just started but not run case
+                    getEl('btnResume').classList.remove('hidden');
                 }
+                
                 updateCounterUI();
                 updateSourcesIndex();
             }
@@ -608,7 +644,7 @@
             return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
         }
 
-        async function findRelevantChunks(queryEmbedding, limit = 8) { // UPDATED TO 8 CHUNKS
+        async function findRelevantChunks(queryEmbedding, limit = 8) { // TOP 8 for Diversity
             if (state.vectors.length === 0) {
                 state.vectors = await window.loadVectors();
             }
@@ -857,8 +893,41 @@
             }
         }
 
+        // --- TIMER UTILS ---
+        function startTimer() {
+            state.startTime = Date.now();
+            state.processedCount = 0;
+            state.timerInterval = setInterval(updateTimerUI, 1000);
+            getEl('timeStats').classList.remove('hidden');
+        }
+        
+        function updateTimerUI() {
+            const elapsedMs = Date.now() - state.startTime;
+            const elapsedSec = Math.floor(elapsedMs / 1000);
+            
+            // Format 00:00
+            const m = Math.floor(elapsedSec / 60).toString().padStart(2, '0');
+            const s = (elapsedSec % 60).toString().padStart(2, '0');
+            getEl('elapsedTime').innerHTML = `<i class="far fa-clock"></i> ${m}:${s}`;
+            
+            // ETA Calculation
+            if(state.processedCount > 0) {
+                const pending = state.questions.filter(q => q.status === 'pending' || q.status === 'retry').length;
+                const avgMsPerQ = elapsedMs / state.processedCount;
+                const remainingMs = avgMsPerQ * pending;
+                const remM = Math.ceil(remainingMs / 60000);
+                getEl('etaTime').textContent = `ETA: ~${remM}m`;
+            } else {
+                getEl('etaTime').textContent = `ETA: Calc...`;
+            }
+        }
+
+        // --- STEP 3: RAG ANALYSIS (UPDATED) ---
         async function startQueueProcessing() {
             if(!navigator.onLine) return alert("Sin conexión.");
+            
+            // Hide recovery alert if active
+            getEl('recoveryAlert').classList.add('hidden');
             
             if (await window.countVectors() === 0) {
                 return alert("ERROR CRÍTICO: No hay base de conocimiento indexada. Ve al Paso 1 y pulsa 'Sincronizar' para crear los vectores antes de analizar.");
@@ -868,6 +937,8 @@
             getEl('btnStop').classList.remove('hidden');
             getEl('btnResume').classList.add('hidden');
             renderResultsUI(); updateCounterUI();
+            
+            startTimer(); // START CLOCK
             
             const pending = state.questions.filter(q => q.status==='pending'||q.status==='retry');
             let processedInBatch = 0;
@@ -897,18 +968,20 @@
                     const tokenEst = Math.ceil(contextText.length / 4) + 200; 
                     if(card) card.querySelector('.status-ind').innerHTML=`<span class="text-xs text-gray-500 mr-2"><i class="fas fa-coins"></i> ${tokenEst} tokens</span> <i class="fas fa-pen-nib text-intiza-blue"></i> Redactando...`;
 
-                    // UPDATED PROMPT: SYNTHESIS FOCUS
+                    // UPDATED CISO PERSONA PROMPT
                     const prompt = `
-                        ROL: CISO. Tu tarea es responder la pregunta SINTETIZANDO información de TODOS los fragmentos de contexto proporcionados. Si la respuesta requiere combinar datos de dos documentos distintos, hazlo.
+                        ROL: Actúas como el CISO de INTIZA. Estás respondiendo un cuestionario de auditoría para un Cliente Corporativo.
+                        TONO: Usa primera persona del plural ("Nosotros", "Nuestra plataforma"). Sé profesional, tranquilizador y orientado a la venta/confianza.
+                        INSTRUCCIÓN: Si un documento dice "El proveedor debe...", tú responde "Cumplimos con...", asumiendo que Intiza es el proveedor.
                         
-                        CONTEXTO (Fragmentos recuperados de la biblioteca normativa):
+                        CONTEXTO (Fragmentos recuperados de la biblioteca normativa interna):
                         """${contextText}"""
                         
-                        PREGUNTA: "${q.text}"
+                        PREGUNTA DEL CLIENTE: "${q.text}"
                         
                         INSTRUCCIONES CLAVE:
-                        1. NO te quedes solo con el primer fragmento. Busca en todos.
-                        2. Si la respuesta no está, di "No se encontró información específica".
+                        1. Sintetiza la información de los fragmentos.
+                        2. Si la respuesta no está, di "No se encontró información específica en nuestra base de conocimiento actual".
                         3. Cita explícitamente el nombre del documento del que sacas cada dato.
                         4. FORMATO FINAL OBLIGATORIO: Al final de la respuesta, añade una línea con: "FUENTES CLAVE: [NombreDoc1], [NombreDoc2]"
                     `;
@@ -918,6 +991,9 @@
                     
                     q.status='done'; q.answer=ans; 
                     await window.saveQ(q); renderCard(card,q); updateCounterUI(); updateSourcesIndex();
+                    
+                    // Update stats
+                    state.processedCount++;
                     
                 } catch(e) {
                     if(e.name==='AbortError') break;
@@ -935,12 +1011,20 @@
                 }
             }
             state.processing=false;
+            clearInterval(state.timerInterval); // Stop clock
             getEl('btnStop').classList.add('hidden');
             if(state.questions.some(q=>q.status==='pending')) getEl('btnResume').classList.remove('hidden');
             getEl('progressStats').textContent = "Proceso finalizado/pausado.";
         }
 
-        function stopProcessing() { if(state.abort) state.abort.abort(); state.processing=false; }
+        function stopProcessing() { 
+            if(state.abort) state.abort.abort(); 
+            state.processing=false; 
+            clearInterval(state.timerInterval);
+            getEl('progressStats').textContent = "Pausado por el usuario.";
+            getEl('btnStop').classList.add('hidden');
+            getEl('btnResume').classList.remove('hidden');
+        }
         
         async function askGeminiWithRetry(text, isJson, signal) {
             let att = 0;
@@ -972,10 +1056,27 @@
         function updateQuestionsUI() { getEl('qCount').textContent = state.questions.length; getEl('questionsList').innerHTML = state.questions.map(q=>`<div class="flex gap-2 text-xs p-1 border-b"><b class="text-intiza-blue min-w-[30px]">${q.id}</b> <span>${q.text}</span></div>`).join(''); }
         function updateCounterUI() { getEl('qCounterDisplay').textContent = `${state.questions.filter(q=>q.status==='done').length} / ${state.questions.length}`; }
         function renderResultsUI() { getEl('resultsContainer').innerHTML=''; state.questions.forEach(q=>renderCard(null,q,true)); }
+        
         function renderCard(card, q, create=false) {
             if(create) {
-                const d = document.createElement('div'); d.id=`card-${q.id}`; d.className="bg-white p-4 rounded border border-slate-200 text-sm mb-4";
-                d.innerHTML = `<div class="flex justify-between mb-2"><span class="font-bold bg-slate-100 px-2 rounded">${q.id}</span> <span class="status-ind text-xs text-slate-400"></span></div><p class="font-medium mb-2">${q.text}</p><div class="ans-body text-slate-600 border-t pt-2">${q.answer?format(q.answer):'Pendiente...'}</div>`;
+                const d = document.createElement('div'); d.id=`card-${q.id}`; d.className="bg-white p-4 rounded border border-slate-200 text-sm mb-4 transition-all";
+                // Added Flag Button back
+                d.innerHTML = `
+                    <div class="flex justify-between mb-2">
+                        <div class="flex gap-2"><span class="font-bold bg-slate-100 px-2 rounded">${q.id}</span> <span class="status-ind text-xs text-slate-400"></span></div>
+                        <button onclick="toggleFb('${q.id}')" class="text-slate-300 hover:text-red-500 transition-colors" title="Corregir respuesta"><i class="fas fa-flag"></i></button>
+                    </div>
+                    <p class="font-medium mb-2 text-slate-800">${q.text}</p>
+                    <div class="ans-body text-slate-600 border-t pt-2 mt-2 leading-relaxed">${q.answer?format(q.answer):'<span class="italic text-slate-400">Pendiente...</span>'}</div>
+                    <!-- Feedback Box -->
+                    <div id="fb-${q.id}" class="hidden mt-3 bg-red-50 p-3 rounded border border-red-100">
+                        <p class="text-[10px] font-bold text-red-700 mb-1">CORRECCIÓN MANUAL (FEEDBACK)</p>
+                        <textarea id="tx-${q.id}" class="w-full text-xs p-2 border border-red-200 rounded mb-2 focus:outline-none focus:border-red-400" rows="2" placeholder="Ej: No usamos tokens físicos, usamos App Authenticator..."></textarea>
+                        <div class="flex justify-end">
+                            <button onclick="reproc('${q.id}')" class="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-1 rounded font-bold transition">Re-Analizar con Corrección</button>
+                        </div>
+                    </div>
+                `;
                 getEl('resultsContainer').appendChild(d);
             } else if(card) {
                 card.querySelector('.status-ind').innerHTML = q.status==='done'?'<i class="fas fa-check text-green-500"></i>':q.status==='error'?'<i class="fas fa-times text-red-500"></i>':'';
@@ -984,48 +1085,66 @@
         }
         function format(t) { return t?t.replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>'):''; }
         
-        // SOURCE INDEX UPDATER
         function updateSourcesIndex() { 
             const container = getEl('sourcesSummaryContainer');
             const list = getEl('sourcesList');
             const sources = new Set();
-            
             state.questions.forEach(q => {
                 if(q.status === 'done' && q.answer) {
                     const matches = q.answer.match(/FUENTES CLAVE: (.*)/g);
-                    if(matches) {
-                        matches.forEach(m => {
-                            const raw = m.replace('FUENTES CLAVE:', '').trim();
-                            const docs = raw.split(',').map(d => d.trim().replace(/^\[|\]$/g, '').replace(/\.$/, ''));
-                            docs.forEach(doc => { if(doc.length > 2) sources.add(doc); });
-                        });
-                    }
+                    if(matches) matches.forEach(m => m.replace('FUENTES CLAVE:', '').trim().split(',').map(d => d.trim().replace(/^\[|\]$/g, '').replace(/\.$/, '')).forEach(doc => { if(doc.length > 2) sources.add(doc); }));
                 }
             });
-
             if (sources.size > 0) {
                 container.classList.remove('hidden');
                 list.innerHTML = '';
-                sources.forEach(s => {
-                    list.innerHTML += `<div class="flex items-center gap-1"><i class="fas fa-file-alt text-slate-400 text-[10px]"></i> <span>${s}</span></div>`;
-                });
+                sources.forEach(s => list.innerHTML += `<div class="flex items-center gap-1"><i class="fas fa-file-alt text-slate-400 text-[10px]"></i> <span>${s}</span></div>`);
             }
         }
         
         window.copyAllResults = function() { navigator.clipboard.writeText(getEl('resultsContainer').innerText); alert("Copiado"); };
         window.sendEmail = function() { window.location.href=`mailto:?subject=Reporte&body=${encodeURIComponent(getEl('resultsContainer').innerText.substring(0,1800))}`; };
+        
         window.reproc = async function(id) {
-            const fb = getEl(`tx-${id}`).value; const q = state.questions.find(x=>x.id===id);
+            const fb = getEl(`tx-${id}`).value; 
+            if(!fb) return alert("Escribe una instrucción para corregir.");
+            
+            const q = state.questions.find(x=>x.id===id);
             getEl(`fb-${id}`).classList.add('hidden');
-            const c = getEl(`card-${id}`); c.querySelector('.ans-body').innerHTML='<i class="fas fa-spin fa-sync"></i>';
-            const p = `CISO MODE. PREGUNTA: "${q.text}" ERROR: "${fb}". CORRIGE: ${state.sourceText.substring(0,40000)} RECUERDA: Añade línea final 'FUENTES CLAVE: [Doc]'`;
+            
+            const card = getEl(`card-${id}`);
+            card.querySelector('.ans-body').innerHTML='<div class="flex items-center gap-2 text-orange-500"><i class="fas fa-sync fa-spin"></i> Aplicando corrección...</div>';
+            
+            // Reprocess using RAG context again but with feedback injection
             try {
-                 q.answer = await askGeminiWithRetry(p, false, null); 
-                 q.status='done'; await window.saveQ(q); renderCard(c,q); updateCounterUI(); updateSourcesIndex();
-            } catch(e) { alert(e.message); }
+                const qEmbedding = await getEmbedding(q.text);
+                const relevantChunks = await findRelevantChunks(qEmbedding, 8);
+                const contextText = relevantChunks.map(c => `[Fuente: ${c.docName}]\n${c.text}`).join('\n\n');
+                
+                const prompt = `
+                    ROL: CISO de INTIZA (Corrección de Respuesta).
+                    CONTEXTO TÉCNICO: """${contextText}"""
+                    PREGUNTA: "${q.text}"
+                    
+                    CRÍTICA DEL HUMANO (CORRECCIÓN): "${fb}"
+                    
+                    INSTRUCCIÓN: Reescribe la respuesta anterior obedeciendo la corrección del humano. Si el documento dice A pero el humano dice B, prioriza la explicación del humano pero menciona lo que dice el documento como contexto. Mantén el tono profesional "Nosotros".
+                    FORMATO FINAL: Añade "FUENTES CLAVE: [...]"
+                `;
+                
+                q.answer = await askGeminiWithRetry(prompt, false, null); 
+                q.status='done'; 
+                await window.saveQ(q); 
+                renderCard(card,q); 
+                updateCounterUI();
+            } catch(e) { 
+                alert("Error al corregir: " + e.message);
+                q.status='error';
+                renderCard(card,q);
+            }
         };
+        
         function toggleFb(id) { getEl(`fb-${id}`).classList.toggle('hidden'); }
-        function getIcon(s) { return s==='done'?'<i class="fas fa-check text-intiza-blue"></i>':s==='error'?'<i class="fas fa-times text-red-500"></i>':s; }
     </script>
 </body>
 </html>
