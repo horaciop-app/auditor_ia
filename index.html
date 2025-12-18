@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v9.0 (RAG Architecture)</title>
+    <title>INTIZA CISO AI OFFICER v9.1 (Overload Guard)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -85,7 +85,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-white opacity-90">MODO CORPORATIVO</div>
-                    <div class="text-green-300 text-[10px] font-mono">v9.0 RAG CORE</div>
+                    <div class="text-green-300 text-[10px] font-mono">v9.1 Overload Guard</div>
                 </div>
             </div>
         </div>
@@ -358,11 +358,11 @@
 
     <script>
         // --- UTILS & CONFIG ---
-        const API_DELAY_MS = 2000; // Much faster now thanks to RAG
+        const API_DELAY_MS = 2000; 
         const RPM_LIMIT = 2000; 
         const TPM_LIMIT = 4000000;
         const WINDOW_MS = 60000; 
-        const CHUNK_SIZE = 1000; // Characters per chunk for vectors
+        const CHUNK_SIZE = 1000; 
         const CHUNK_OVERLAP = 100;
 
         // LISTA DE CANDIDATOS PARA AUTO-DETECCIÓN
@@ -394,7 +394,7 @@
         const DB_NAME = 'AuditorDB_v4_RAG'; 
         const STORE_DOCS = 'documents'; 
         const STORE_QUESTIONS = 'questions'; 
-        const STORE_VECTORS = 'vectors'; // New store for embeddings
+        const STORE_VECTORS = 'vectors'; 
         
         const dbPromise = new Promise((res, rej) => {
             const req = indexedDB.open(DB_NAME, 1);
@@ -446,13 +446,13 @@
         // --- STATE ---
         let state = { 
             apiKey: localStorage.getItem('ciso_key')||'', 
-            sourceText:'', // Just for reference
+            sourceText:'', 
             questions:[], 
             abort:null, 
             processing:false, 
             requestLog: [],
             model: localStorage.getItem('ciso_active_model') || '',
-            vectors: [] // In-memory vectors cache
+            vectors: [] 
         };
 
         // --- AUTH & SETUP ---
@@ -496,13 +496,11 @@
             
             await refreshDocsUI();
             
-            // Check vector index status
             const vCount = await window.countVectors();
             getEl('vectorStats').textContent = `${vCount} Chunks`;
             getEl('vectorStatus').textContent = vCount > 0 ? "Indexado y Listo" : "Requiere Indexación";
             getEl('vectorStatus').className = vCount > 0 ? "text-[9px] text-green-600 font-bold mt-0.5" : "text-[9px] text-red-500 font-bold mt-0.5";
             
-            // Load questions
             const qs = await window.loadQs();
             if(qs.length > 0) {
                 state.questions = qs.sort((a,b) => a.id.localeCompare(b.id, undefined, {numeric: true}));
@@ -519,7 +517,6 @@
             setInterval(updateMonitorUI, 1000);
         };
 
-        // --- KEY MANAGEMENT ---
         window.resetApiKey = function() {
             if(confirm("¿Cambiar API Key?")) {
                 localStorage.removeItem('ciso_key');
@@ -529,7 +526,6 @@
             }
         };
 
-        // --- METRICS ---
         function trackRequest(tokens) { state.requestLog.push({ time: Date.now(), tokens: tokens }); }
         function updateMonitorUI() {
             const now = Date.now();
@@ -543,7 +539,7 @@
             getEl('tpmBar').style.width = `${Math.min((tpm/TPM_LIMIT)*100, 100)}%`;
         }
 
-        // --- VECTOR UTILS (RAG CORE) ---
+        // --- VECTOR UTILS ---
         function chunkText(text, size, overlap) {
             const chunks = [];
             for (let i = 0; i < text.length; i += (size - overlap)) {
@@ -586,11 +582,9 @@
         }
 
         async function findRelevantChunks(queryEmbedding, limit = 5) {
-            // Load vectors into memory if not loaded
             if (state.vectors.length === 0) {
                 state.vectors = await window.loadVectors();
             }
-            
             if (state.vectors.length === 0) return [];
 
             const scored = state.vectors.map(v => ({
@@ -598,12 +592,10 @@
                 score: cosineSimilarity(queryEmbedding, v.vector)
             }));
 
-            // Sort descending
             scored.sort((a, b) => b.score - a.score);
             return scored.slice(0, limit);
         }
 
-        // --- INDEXING PROCESS ---
         async function runIndexingProcess(docs) {
             const area = getEl('vectorizationArea');
             const bar = getEl('vecBar');
@@ -613,7 +605,6 @@
             let totalChunks = 0;
             let processedChunks = 0;
             
-            // 1. Chunking
             log("Iniciando fragmentación de documentos...", 'info');
             let allChunks = [];
             for(const doc of docs) {
@@ -629,18 +620,12 @@
             totalChunks = allChunks.length;
             log(`${totalChunks} fragmentos generados. Iniciando vectorización...`, 'info');
 
-            // 2. Embedding (Batched somewhat)
-            // Clear old vectors first to avoid dupes
-            await window.clearDB('all'); // Clears vectors and docs to be safe? No, let's clear just vectors logic inside clearDB needs tuning or just overwrite.
-            // Actually, we should clear vectors store before re-indexing.
             const db = await dbPromise;
             const tx = db.transaction(STORE_VECTORS, 'readwrite');
-            tx.objectStore(STORE_VECTORS).clear(); // Clear existing vectors
+            tx.objectStore(STORE_VECTORS).clear(); 
             
-            // Process sequentially to respect rate limits (Embeddings are fast but have RPM limits)
             for(let i=0; i<allChunks.length; i++) {
                 const chunk = allChunks[i];
-                
                 try {
                     const vec = await getEmbedding(chunk.text);
                     if(vec) {
@@ -656,17 +641,16 @@
                     bar.style.width = `${pct}%`;
                     prog.textContent = `${pct}%`;
                     
-                    if(i % 10 === 0) await sleep(200); // Slight delay every 10 chunks
+                    if(i % 10 === 0) await sleep(200); 
                 } catch(e) {
                     log(`Error vectorizando chunk ${i}: ${e.message}`, 'error');
-                    await sleep(2000); // Pause on error
+                    await sleep(2000); 
                 }
             }
             
             log("Indexado Vectorial Completado.", 'success');
             setTimeout(() => area.classList.add('hidden'), 3000);
             
-            // Reload stats
             const vCount = await window.countVectors();
             getEl('vectorStats').textContent = `${vCount} Chunks`;
             getEl('vectorStatus').textContent = "Indexado y Listo";
@@ -737,7 +721,6 @@
             }
         }
 
-        // --- FILE EXTRACTION UTILS ---
         async function extractTextFromPDF(blob) {
             const pdf = await pdfjsLib.getDocument({ data: await blob.arrayBuffer() }).promise;
             let t = ''; for(let i=1;i<=pdf.numPages;i++) t += (await (await pdf.getPage(i)).getTextContent()).items.map(x=>x.str).join(' ');
@@ -750,7 +733,6 @@
             return t;
         }
 
-        // --- UI NAV & QUESTIONS ---
         function goToStep2() {
             if(!state.apiKey) return alert("Configura la IA primero.");
             showStep(2);
@@ -773,7 +755,6 @@
             else getEl('btnAnalyze').classList.add('hidden');
         };
 
-        // --- STEP 2: EXTRACT QUESTIONS (Keep existing logic) ---
         async function extractQuestions() {
             const files = getEl('questionFiles').files;
             const manualText = getEl('manualQuestionText').value.trim();
@@ -809,13 +790,12 @@
                     const prompt = `ACTÚA COMO CISO. Extrae preguntas de CUMPLIMIENTO/AUDITORÍA. JSON: [{"id":"ID","text":"Pregunta"}]. Texto: ${chunks[i]}`;
                     
                     trackRequest(Math.ceil(prompt.length/4));
-                    const res = await callGemini(prompt, true);
+                    const res = await askGeminiWithRetry(prompt, true, null);
                     let cleanJson = res.replace(/```json|```/g, '').trim();
                     const first = cleanJson.indexOf('['); if(first !== -1) cleanJson = cleanJson.substring(first);
                     
                     let chunkQs = [];
                     try { chunkQs = JSON.parse(cleanJson); } catch(e) { 
-                        // Fallback simple fix
                         try { chunkQs = JSON.parse(cleanJson + ']'); } catch(e2) { chunkQs = []; }
                     }
 
@@ -850,11 +830,9 @@
             }
         }
 
-        // --- STEP 3: RAG ANALYSIS ---
         async function startQueueProcessing() {
             if(!navigator.onLine) return alert("Sin conexión.");
             
-            // Check vectors
             if (await window.countVectors() === 0) {
                 return alert("ERROR CRÍTICO: No hay base de conocimiento indexada. Ve al Paso 1 y pulsa 'Sincronizar' para crear los vectores antes de analizar.");
             }
@@ -880,21 +858,17 @@
                 getEl('progressStats').textContent=`Buscando info para ID ${q.id}...`;
 
                 try {
-                    // 1. Generate Embedding for Question
                     const qEmbedding = await getEmbedding(q.text);
                     if(!qEmbedding) throw new Error("No se pudo vectorizar la pregunta.");
 
-                    // 2. Find relevant chunks
-                    const relevantChunks = await findRelevantChunks(qEmbedding, 5); // Top 5
+                    const relevantChunks = await findRelevantChunks(qEmbedding, 5); 
                     
                     if(relevantChunks.length === 0) throw new Error("No se encontró información relevante.");
                     
-                    // 3. Construct Context
                     const contextText = relevantChunks.map(c => `[Fuente: ${c.docName}]\n${c.text}`).join('\n\n');
                     
                     if(card) card.querySelector('.status-ind').innerHTML=`<i class="fas fa-pen-nib text-intiza-blue"></i> Redactando...`;
 
-                    // 4. Generate Answer
                     const prompt = `
                         ROL: CISO. Responde basado EXCLUSIVAMENTE en el siguiente contexto recuperado.
                         
@@ -910,7 +884,7 @@
                     `;
 
                     trackRequest(Math.ceil(prompt.length/4));
-                    const ans = await askGeminiWithRetry(prompt, "", state.abort.signal);
+                    const ans = await askGeminiWithRetry(prompt, false, state.abort.signal);
                     
                     q.status='done'; q.answer=ans; 
                     await window.saveQ(q); renderCard(card,q); updateCounterUI(); updateSourcesIndex();
@@ -926,7 +900,7 @@
                 
                 processedInBatch++;
                 if(processedInBatch >= 5) {
-                    await sleep(2000); // Short pause is enough for RAG
+                    await sleep(2000); 
                     processedInBatch = 0;
                 }
             }
@@ -936,16 +910,27 @@
             getEl('progressStats').textContent = "Proceso finalizado/pausado.";
         }
 
-        // --- COMMON UTILS ---
         function stopProcessing() { if(state.abort) state.abort.abort(); state.processing=false; }
-        async function askGeminiWithRetry(q, c, s) {
+        
+        async function askGeminiWithRetry(text, isJson, signal) {
             let att = 0;
-            while(att<3) {
-                try { return await callGemini(q, false, s); }
-                catch(e) { if(e.message.includes('429')) { att++; await sleep(5000); } else throw e; }
+            while(att < 5) { 
+                try { 
+                    return await callGemini(text, isJson, signal); 
+                } catch(e) { 
+                    const msg = e.message.toLowerCase();
+                    if(msg.includes('429') || msg.includes('overloaded') || msg.includes('503')) { 
+                        att++; 
+                        console.warn(`Intento ${att}: ${e.message}. Esperando...`);
+                        await sleep(5000 * att); 
+                    } else {
+                        throw e; 
+                    }
+                }
             }
-            throw new Error("Busy.");
+            throw new Error("El servidor de IA está saturado. Intenta de nuevo más tarde.");
         }
+
         async function callGemini(text, json, signal) {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${state.model}:generateContent?key=${state.apiKey}`;
             const body = { contents:[{parts:[{text}]}] }; if(json) body.generationConfig={responseMimeType:"application/json"};
@@ -954,7 +939,6 @@
             return (await r.json()).candidates[0].content.parts[0].text;
         }
 
-        // UI HELPERS
         function updateQuestionsUI() { getEl('qCount').textContent = state.questions.length; getEl('questionsList').innerHTML = state.questions.map(q=>`<div class="flex gap-2 text-xs p-1 border-b"><b class="text-intiza-blue min-w-[30px]">${q.id}</b> <span>${q.text}</span></div>`).join(''); }
         function updateCounterUI() { getEl('qCounterDisplay').textContent = `${state.questions.filter(q=>q.status==='done').length} / ${state.questions.length}`; }
         function renderResultsUI() { getEl('resultsContainer').innerHTML=''; state.questions.forEach(q=>renderCard(null,q,true)); }
@@ -969,9 +953,21 @@
             }
         }
         function format(t) { return t?t.replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>'):''; }
-        function updateSourcesIndex() { /* Simplificado para RAG */ }
+        function updateSourcesIndex() { }
         window.copyAllResults = function() { navigator.clipboard.writeText(getEl('resultsContainer').innerText); alert("Copiado"); };
         window.sendEmail = function() { window.location.href=`mailto:?subject=Reporte&body=${encodeURIComponent(getEl('resultsContainer').innerText.substring(0,1800))}`; };
+        window.reproc = async function(id) {
+            const fb = getEl(`tx-${id}`).value; const q = state.questions.find(x=>x.id===id);
+            getEl(`fb-${id}`).classList.add('hidden');
+            const c = getEl(`card-${id}`); c.querySelector('.ans-body').innerHTML='<i class="fas fa-spin fa-sync"></i>';
+            const p = `CISO MODE. PREGUNTA: "${q.text}" ERROR: "${fb}". CORRIGE: ${state.sourceText.substring(0,40000)} RECUERDA: Añade línea final 'FUENTES CLAVE: [Doc]'`;
+            try {
+                 q.answer = await askGeminiWithRetry(p, false, null); 
+                 q.status='done'; await window.saveQ(q); renderCard(c,q); updateCounterUI(); updateSourcesIndex();
+            } catch(e) { alert(e.message); }
+        };
+        function toggleFb(id) { getEl(`fb-${id}`).classList.toggle('hidden'); }
+        function getIcon(s) { return s==='done'?'<i class="fas fa-check text-intiza-blue"></i>':s==='error'?'<i class="fas fa-times text-red-500"></i>':s; }
     </script>
 </body>
 </html>
