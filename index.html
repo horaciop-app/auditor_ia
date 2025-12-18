@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v8.9 (Auto-Resume & Crash Guard)</title>
+    <title>INTIZA CISO AI OFFICER v8.10 (Safe 20s Delay)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -86,7 +86,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-white opacity-90">MODO CORPORATIVO</div>
-                    <div class="text-blue-200 text-[10px]">v8.9 Crash Guard</div>
+                    <div class="text-blue-200 text-[10px]">v8.10 Safe 20s Delay</div>
                 </div>
             </div>
         </div>
@@ -349,7 +349,7 @@
 
     <script>
         // --- UTILS & CONFIG ---
-        const API_DELAY_MS = 5000; // 5s Delay
+        const API_DELAY_MS = 20000; // 20s Delay para evitar límite de tokens
         const RPM_LIMIT = 2000; 
         const TPM_LIMIT = 4000000; 
         const WINDOW_MS = 60000; 
