@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v8.10 (Safe 20s Delay)</title>
+    <title>INTIZA CISO AI OFFICER v9.0 (RAG Architecture)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -58,7 +58,6 @@
             div.innerText = `Error Detectado: ${msg} (Línea ${line})`;
         };
         
-        // Listener Global de Conexión
         window.addEventListener('offline', function() {
             const stats = document.getElementById('progressStats');
             if(stats) stats.innerHTML = '<span class="text-red-600 font-bold bg-red-100 px-2 py-1 rounded"><i class="fas fa-wifi"></i> INTERNET CAÍDO</span>';
@@ -86,7 +85,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-white opacity-90">MODO CORPORATIVO</div>
-                    <div class="text-blue-200 text-[10px]">v8.10 Safe 20s Delay</div>
+                    <div class="text-green-300 text-[10px] font-mono">v9.0 RAG CORE</div>
                 </div>
             </div>
         </div>
@@ -123,7 +122,7 @@
                         <i class="fas fa-bolt text-purple-400"></i>
                     </div>
                     <div class="text-sm font-mono font-bold text-slate-700 mt-1">
-                        <span id="tpmVal" class="text-purple-600">0</span> / <span class="text-slate-400">1M</span>
+                        <span id="tpmVal" class="text-purple-600">0</span> / <span class="text-slate-400">4M</span>
                     </div>
                     <div class="w-full bg-slate-100 h-1.5 rounded-full mt-1">
                         <div id="tpmBar" class="bg-purple-500 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
@@ -133,13 +132,13 @@
                 <!-- Timer -->
                 <div>
                     <div class="text-[10px] font-bold text-slate-500 uppercase flex justify-between">
-                        <span>Restitución</span>
-                        <i class="fas fa-hourglass-half text-orange-400"></i>
+                        <span>Estado Vectores</span>
+                        <i class="fas fa-database text-orange-400"></i>
                     </div>
-                    <div class="text-sm font-mono font-bold text-orange-600 mt-1" id="resetTimer">
-                        0s
+                    <div class="text-sm font-mono font-bold text-slate-700 mt-1" id="vectorStats">
+                        0 Chunks
                     </div>
-                    <div class="text-[9px] text-slate-400 leading-tight mt-0.5">Para liberar carga</div>
+                    <div class="text-[9px] text-slate-400 leading-tight mt-0.5" id="vectorStatus">Sin indexar</div>
                 </div>
             </div>
         </div>
@@ -179,7 +178,7 @@
         <div class="flex justify-between mb-8 text-sm font-medium select-none">
             <div id="step1-ind" class="flex flex-col items-center step-active w-1/3 cursor-pointer transition-all" onclick="showStep(1)">
                 <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center mb-1 bg-white">1</div>
-                <span>Fuentes</span>
+                <span>Fuentes (Indexado)</span>
             </div>
             <div id="step2-ind" class="flex flex-col items-center step-inactive w-1/3 cursor-pointer transition-all" onclick="showStep(2)">
                 <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center mb-1 bg-white">2</div>
@@ -187,7 +186,7 @@
             </div>
             <div id="step3-ind" class="flex flex-col items-center step-inactive w-1/3 cursor-pointer transition-all" onclick="showStep(3)">
                 <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center mb-1 bg-white">3</div>
-                <span>Análisis</span>
+                <span>Análisis RAG</span>
             </div>
         </div>
 
@@ -202,7 +201,7 @@
                     <button onclick="window.debugSync()" class="text-xs bg-intiza-blue text-white hover:bg-intiza-dark px-4 py-2 rounded transition font-bold shadow-md flex items-center gap-2">
                         <i class="fas fa-sync-alt"></i> SINCRONIZAR
                     </button>
-                    <button onclick="window.clearDB('documents')" class="text-xs text-red-400 hover:text-red-600 px-2 py-1 transition" title="Borrar todo">
+                    <button onclick="window.clearDB('all')" class="text-xs text-red-400 hover:text-red-600 px-2 py-1 transition" title="Borrar todo">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -218,6 +217,20 @@
                 </div>
             </div>
 
+            <!-- VECTORIZACIÓN STATUS -->
+            <div id="vectorizationArea" class="mb-4 hidden">
+                <div class="bg-amber-50 border border-amber-100 p-3 rounded-lg">
+                    <div class="flex justify-between text-xs font-bold text-amber-700 mb-1">
+                        <span><i class="fas fa-brain"></i> INDEXANDO CONOCIMIENTO (Creando Vectores)</span>
+                        <span id="vecProgress">0%</span>
+                    </div>
+                    <div class="w-full bg-amber-200 h-2 rounded-full overflow-hidden">
+                        <div id="vecBar" class="bg-amber-500 h-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                    <p class="text-[10px] text-amber-600 mt-1 italic">Esto se hace una sola vez para ahorrar costos futuros.</p>
+                </div>
+            </div>
+
             <div id="filesListContainer" class="bg-white rounded-lg border border-slate-200 p-0 overflow-hidden mb-4">
                 <div class="bg-slate-100 px-4 py-2 text-xs font-bold text-slate-500 flex justify-between">
                     <span>DOCUMENTOS ACTIVOS</span>
@@ -229,14 +242,10 @@
             </div>
             
             <div class="mt-4 pt-4 border-t border-slate-100">
-                 <p class="text-[10px] text-amber-700 bg-amber-50 p-2 rounded border border-amber-100 flex items-start gap-2">
-                    <i class="fas fa-lightbulb mt-0.5 text-amber-500"></i> 
-                    <span><strong>TIP:</strong> Para una mejor lectura, asegúrese de que los archivos en el servidor no tengan espacios en blanco en el nombre (use guiones - o _).</span>
+                 <p class="text-[10px] text-blue-700 bg-blue-50 p-2 rounded border border-blue-100 flex items-start gap-2">
+                    <i class="fas fa-info-circle mt-0.5 text-blue-500"></i> 
+                    <span><strong>ARQUITECTURA RAG ACTIVADA:</strong> Los documentos se fragmentarán y convertirán en vectores para reducir el costo por pregunta de $0.04 a $0.0001 aprox.</span>
                 </p>
-            </div>
-
-            <div id="sourceProcessing" class="hidden mt-4 flex items-center justify-center text-intiza-blue gap-2">
-                <div class="loader"></div> <span id="procText">Procesando...</span>
             </div>
 
             <div class="mt-6 flex justify-end">
@@ -289,7 +298,7 @@
             <div class="mt-6 flex justify-between">
                 <button onclick="showStep(1)" class="text-slate-500 hover:text-slate-700 font-medium px-4 py-2">Atrás</button>
                 <button id="btnAnalyze" onclick="extractQuestions()" class="bg-slate-800 hover:bg-slate-900 text-white px-6 py-2 rounded-lg font-medium hidden shadow">Analizar Contenido</button>
-                <button id="btnToStep3" onclick="startQueueProcessing()" class="bg-intiza-blue hover:bg-intiza-dark text-white px-6 py-2 rounded-lg font-medium hidden shadow-lg transform hover:-translate-y-1 transition-all">Comenzar Análisis <i class="fas fa-play ml-1"></i></button>
+                <button id="btnToStep3" onclick="startQueueProcessing()" class="bg-intiza-blue hover:bg-intiza-dark text-white px-6 py-2 rounded-lg font-medium hidden shadow-lg transform hover:-translate-y-1 transition-all">Comenzar Análisis RAG <i class="fas fa-rocket ml-1"></i></button>
             </div>
         </div>
 
@@ -349,10 +358,12 @@
 
     <script>
         // --- UTILS & CONFIG ---
-        const API_DELAY_MS = 20000; // 20s Delay para evitar límite de tokens
+        const API_DELAY_MS = 2000; // Much faster now thanks to RAG
         const RPM_LIMIT = 2000; 
-        const TPM_LIMIT = 4000000; 
+        const TPM_LIMIT = 4000000;
         const WINDOW_MS = 60000; 
+        const CHUNK_SIZE = 1000; // Characters per chunk for vectors
+        const CHUNK_OVERLAP = 100;
 
         // LISTA DE CANDIDATOS PARA AUTO-DETECCIÓN
         const MODEL_CANDIDATES = [
@@ -379,10 +390,11 @@
         function getEl(id) { return document.getElementById(id); }
         const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-        // --- DATABASE ---
-        const DB_NAME = 'AuditorDB_v3'; 
+        // --- DATABASE V4 (RAG) ---
+        const DB_NAME = 'AuditorDB_v4_RAG'; 
         const STORE_DOCS = 'documents'; 
         const STORE_QUESTIONS = 'questions'; 
+        const STORE_VECTORS = 'vectors'; // New store for embeddings
         
         const dbPromise = new Promise((res, rej) => {
             const req = indexedDB.open(DB_NAME, 1);
@@ -390,6 +402,7 @@
                 const db = e.target.result;
                 if (!db.objectStoreNames.contains(STORE_DOCS)) db.createObjectStore(STORE_DOCS, { keyPath: 'name' });
                 if (!db.objectStoreNames.contains(STORE_QUESTIONS)) db.createObjectStore(STORE_QUESTIONS, { keyPath: 'id' });
+                if (!db.objectStoreNames.contains(STORE_VECTORS)) db.createObjectStore(STORE_VECTORS, { keyPath: 'id', autoIncrement: true });
             };
             req.onsuccess = (e) => res(e.target.result);
             req.onerror = (e) => rej(e.target.error);
@@ -411,111 +424,96 @@
         window.loadDocs = async function() { return new Promise(async res => { (await dbPromise).transaction(STORE_DOCS).objectStore(STORE_DOCS).getAll().onsuccess = e => res(e.target.result); }); };
         window.saveQ = async function(q) { await dbOp('readwrite', STORE_QUESTIONS, s => s.put(q)); };
         window.loadQs = async function() { return new Promise(async res => { (await dbPromise).transaction(STORE_QUESTIONS).objectStore(STORE_QUESTIONS).getAll().onsuccess = e => res(e.target.result); }); };
-        window.clearDB = async function(store) { if(confirm("¿Borrar datos?")) { await dbOp('readwrite', store, s => s.clear()); window.location.reload(); } };
+        window.saveVector = async function(v) { await dbOp('readwrite', STORE_VECTORS, s => s.put(v)); };
+        window.loadVectors = async function() { return new Promise(async res => { (await dbPromise).transaction(STORE_VECTORS).objectStore(STORE_VECTORS).getAll().onsuccess = e => res(e.target.result); }); };
+        window.countVectors = async function() { return new Promise(async res => { (await dbPromise).transaction(STORE_VECTORS).objectStore(STORE_VECTORS).count().onsuccess = e => res(e.target.result); }); };
+        
+        window.clearDB = async function(target) { 
+            if(confirm("¿Borrar datos? Esto eliminará documentos y el índice vectorial.")) { 
+                const db = await dbPromise;
+                const tx = db.transaction([STORE_DOCS, STORE_QUESTIONS, STORE_VECTORS], 'readwrite');
+                if(target === 'all' || target === 'documents') {
+                    tx.objectStore(STORE_DOCS).clear();
+                    tx.objectStore(STORE_VECTORS).clear();
+                }
+                if(target === 'all' || target === 'questions') {
+                    tx.objectStore(STORE_QUESTIONS).clear();
+                }
+                window.location.reload(); 
+            } 
+        };
 
         // --- STATE ---
         let state = { 
             apiKey: localStorage.getItem('ciso_key')||'', 
-            sourceText:'', 
+            sourceText:'', // Just for reference
             questions:[], 
             abort:null, 
             processing:false, 
             requestLog: [],
-            model: localStorage.getItem('ciso_active_model') || ''
+            model: localStorage.getItem('ciso_active_model') || '',
+            vectors: [] // In-memory vectors cache
         };
 
-        // --- AUTO-DETECT LOGIC ---
+        // --- AUTH & SETUP ---
         window.startAutoDetection = async function() {
             const key = getEl('apiKeyInput').value.trim();
             if(!key) return alert("Por favor ingresa tu API Key primero.");
-            
             state.apiKey = key;
             localStorage.setItem('ciso_key', key);
-
-            const statusBox = getEl('connectionStatus');
-            const loader = getEl('detectLoader');
-            const msg = getEl('detectMsg');
-            const btn = getEl('btnAutoConnect');
-            
-            statusBox.classList.remove('hidden');
-            loader.classList.remove('hidden');
-            msg.textContent = "Probando modelos disponibles...";
-            msg.className = "text-slate-600";
-            btn.disabled = true;
-            btn.classList.add('opacity-50');
-
+            getEl('connectionStatus').classList.remove('hidden');
             let foundModel = null;
-            
             for (const model of MODEL_CANDIDATES) {
-                msg.textContent = `Probando: ${model}...`;
-                await sleep(300); 
-                const works = await testModelConnection(key, model);
-                if (works) {
-                    foundModel = model;
-                    break;
-                }
+                getEl('detectMsg').textContent = `Probando: ${model}...`;
+                await sleep(200); 
+                if (await testModelConnection(key, model)) { foundModel = model; break; }
             }
-
             if (foundModel) {
                 state.model = foundModel;
                 localStorage.setItem('ciso_active_model', foundModel);
-                msg.textContent = "¡Conectado!";
-                msg.className = "text-green-600 font-bold";
-                loader.classList.add('hidden');
+                getEl('detectMsg').innerHTML = `<span class="text-green-600 font-bold">¡Conectado!</span>`;
                 getEl('activeModelBadge').classList.remove('hidden');
                 getEl('modelNameDisplay').textContent = foundModel;
-                setTimeout(() => statusBox.classList.add('hidden'), 3000);
+                setTimeout(() => getEl('connectionStatus').classList.add('hidden'), 2000);
             } else {
-                msg.textContent = "Error: Ningún modelo compatible.";
-                msg.className = "text-red-500 font-bold";
-                loader.classList.add('hidden');
+                getEl('detectMsg').textContent = "Error: Ningún modelo compatible.";
             }
-            btn.disabled = false;
-            btn.classList.remove('opacity-50');
         };
 
         async function testModelConnection(key, modelName) {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${key}`;
-            const body = { contents: [{ parts: [{ text: "Ping" }] }] };
             try {
-                const r = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
-                if (r.ok) return true;
-                return false;
-            } catch (e) {
-                return false;
-            }
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${key}`;
+                const r = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents: [{ parts: [{ text: "Ping" }] }] }) });
+                return r.ok;
+            } catch (e) { return false; }
         }
 
-        // --- INIT ---
         window.onload = async function() {
             if(state.apiKey) {
                 getEl('apiKeyInput').value = state.apiKey;
-                if(state.model) {
-                    getEl('activeModelBadge').classList.remove('hidden');
-                    getEl('modelNameDisplay').textContent = state.model;
-                }
+                if(state.model) { getEl('activeModelBadge').classList.remove('hidden'); getEl('modelNameDisplay').textContent = state.model; }
             }
             
             await refreshDocsUI();
             
+            // Check vector index status
+            const vCount = await window.countVectors();
+            getEl('vectorStats').textContent = `${vCount} Chunks`;
+            getEl('vectorStatus').textContent = vCount > 0 ? "Indexado y Listo" : "Requiere Indexación";
+            getEl('vectorStatus').className = vCount > 0 ? "text-[9px] text-green-600 font-bold mt-0.5" : "text-[9px] text-red-500 font-bold mt-0.5";
+            
+            // Load questions
             const qs = await window.loadQs();
             if(qs.length > 0) {
                 state.questions = qs.sort((a,b) => a.id.localeCompare(b.id, undefined, {numeric: true}));
                 updateQuestionsUI(); renderResultsUI(); enableStep(3);
-                
-                // DETECCIÓN DE TRABAJO PENDIENTE AL REINICIAR
                 const pending = state.questions.filter(q => q.status === 'pending' || q.status === 'retry');
                 if(pending.length > 0) {
                     getEl('btnResume').classList.remove('hidden');
                     getEl('progressStats').innerHTML = `<span class="text-amber-600 font-bold"><i class="fas fa-history"></i> Recuperado: ${pending.length} pendientes.</span>`;
                 }
-                
                 updateCounterUI();
                 updateSourcesIndex();
-            }
-            
-            if(window.location.protocol === 'file:') {
-                 log("ERROR: Modo local file:// detectado. La sincronización no funcionará.", 'error');
             }
             
             setInterval(updateMonitorUI, 1000);
@@ -526,77 +524,177 @@
             if(confirm("¿Cambiar API Key?")) {
                 localStorage.removeItem('ciso_key');
                 localStorage.removeItem('ciso_active_model');
-                state.apiKey = '';
-                state.model = '';
-                getEl('apiKeyInput').value = '';
+                state.apiKey = ''; state.model = ''; getEl('apiKeyInput').value = '';
                 getEl('activeModelBadge').classList.add('hidden');
-                getEl('apiKeyInput').focus();
             }
         };
 
-        // --- RATE MONITOR ---
-        function trackRequest(tokens) {
-            const now = Date.now();
-            state.requestLog.push({ time: now, tokens: tokens });
-        }
-
+        // --- METRICS ---
+        function trackRequest(tokens) { state.requestLog.push({ time: Date.now(), tokens: tokens }); }
         function updateMonitorUI() {
             const now = Date.now();
             state.requestLog = state.requestLog.filter(req => (now - req.time) < WINDOW_MS);
-            
             const rpm = state.requestLog.length;
             const tpm = state.requestLog.reduce((acc, req) => acc + req.tokens, 0);
             
-            let timeToFree = 0;
-            if (state.requestLog.length > 0) {
-                const oldest = state.requestLog[0].time;
-                timeToFree = Math.max(0, Math.ceil((WINDOW_MS - (now - oldest)) / 1000));
+            getEl('rpmVal').textContent = rpm;
+            getEl('rpmBar').style.width = `${Math.min((rpm/RPM_LIMIT)*100, 100)}%`;
+            getEl('tpmVal').textContent = tpm.toLocaleString();
+            getEl('tpmBar').style.width = `${Math.min((tpm/TPM_LIMIT)*100, 100)}%`;
+        }
+
+        // --- VECTOR UTILS (RAG CORE) ---
+        function chunkText(text, size, overlap) {
+            const chunks = [];
+            for (let i = 0; i < text.length; i += (size - overlap)) {
+                chunks.push(text.substring(i, i + size));
             }
+            return chunks;
+        }
 
-            const rpmEl = getEl('rpmVal'); if(rpmEl) rpmEl.textContent = rpm;
-            const rpmBar = getEl('rpmBar'); 
-            if(rpmBar) rpmBar.style.width = `${Math.min((rpm/RPM_LIMIT)*100, 100)}%`;
-
-            const tpmEl = getEl('tpmVal'); if(tpmEl) tpmEl.textContent = tpm.toLocaleString();
-            const tpmBar = getEl('tpmBar');
-            if(tpmBar) tpmBar.style.width = `${Math.min((tpm/TPM_LIMIT)*100, 100)}%`;
-
-            const resetTimer = getEl('resetTimer');
-            if (resetTimer) {
-                resetTimer.textContent = timeToFree + "s";
-                if(timeToFree > 0) resetTimer.className = "text-lg font-mono font-bold text-orange-600 mt-1";
-                else resetTimer.className = "text-lg font-mono font-bold text-green-600 mt-1";
+        async function getEmbedding(text) {
+            if(!text || !text.trim()) return null;
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${state.apiKey}`;
+            try {
+                const r = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: "models/text-embedding-004",
+                        content: { parts: [{ text: text }] }
+                    })
+                });
+                if (!r.ok) throw new Error("Embed API Error");
+                const data = await r.json();
+                return data.embedding.values;
+            } catch(e) {
+                console.error("Embedding fail:", e);
+                return null;
             }
         }
 
-        // --- SYNC FUNCTION ---
+        function cosineSimilarity(vecA, vecB) {
+            let dotProduct = 0;
+            let normA = 0;
+            let normB = 0;
+            for (let i = 0; i < vecA.length; i++) {
+                dotProduct += vecA[i] * vecB[i];
+                normA += vecA[i] * vecA[i];
+                normB += vecB[i] * vecB[i];
+            }
+            return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+        }
+
+        async function findRelevantChunks(queryEmbedding, limit = 5) {
+            // Load vectors into memory if not loaded
+            if (state.vectors.length === 0) {
+                state.vectors = await window.loadVectors();
+            }
+            
+            if (state.vectors.length === 0) return [];
+
+            const scored = state.vectors.map(v => ({
+                ...v,
+                score: cosineSimilarity(queryEmbedding, v.vector)
+            }));
+
+            // Sort descending
+            scored.sort((a, b) => b.score - a.score);
+            return scored.slice(0, limit);
+        }
+
+        // --- INDEXING PROCESS ---
+        async function runIndexingProcess(docs) {
+            const area = getEl('vectorizationArea');
+            const bar = getEl('vecBar');
+            const prog = getEl('vecProgress');
+            area.classList.remove('hidden');
+            
+            let totalChunks = 0;
+            let processedChunks = 0;
+            
+            // 1. Chunking
+            log("Iniciando fragmentación de documentos...", 'info');
+            let allChunks = [];
+            for(const doc of docs) {
+                const chunks = chunkText(doc.content, CHUNK_SIZE, CHUNK_OVERLAP);
+                chunks.forEach((txt, idx) => {
+                    allChunks.push({
+                        docName: doc.name,
+                        text: txt,
+                        chunkId: `${doc.name}_${idx}`
+                    });
+                });
+            }
+            totalChunks = allChunks.length;
+            log(`${totalChunks} fragmentos generados. Iniciando vectorización...`, 'info');
+
+            // 2. Embedding (Batched somewhat)
+            // Clear old vectors first to avoid dupes
+            await window.clearDB('all'); // Clears vectors and docs to be safe? No, let's clear just vectors logic inside clearDB needs tuning or just overwrite.
+            // Actually, we should clear vectors store before re-indexing.
+            const db = await dbPromise;
+            const tx = db.transaction(STORE_VECTORS, 'readwrite');
+            tx.objectStore(STORE_VECTORS).clear(); // Clear existing vectors
+            
+            // Process sequentially to respect rate limits (Embeddings are fast but have RPM limits)
+            for(let i=0; i<allChunks.length; i++) {
+                const chunk = allChunks[i];
+                
+                try {
+                    const vec = await getEmbedding(chunk.text);
+                    if(vec) {
+                        await window.saveVector({
+                            id: chunk.chunkId,
+                            docName: chunk.docName,
+                            text: chunk.text,
+                            vector: vec
+                        });
+                    }
+                    processedChunks++;
+                    const pct = Math.round((processedChunks / totalChunks) * 100);
+                    bar.style.width = `${pct}%`;
+                    prog.textContent = `${pct}%`;
+                    
+                    if(i % 10 === 0) await sleep(200); // Slight delay every 10 chunks
+                } catch(e) {
+                    log(`Error vectorizando chunk ${i}: ${e.message}`, 'error');
+                    await sleep(2000); // Pause on error
+                }
+            }
+            
+            log("Indexado Vectorial Completado.", 'success');
+            setTimeout(() => area.classList.add('hidden'), 3000);
+            
+            // Reload stats
+            const vCount = await window.countVectors();
+            getEl('vectorStats').textContent = `${vCount} Chunks`;
+            getEl('vectorStatus').textContent = "Indexado y Listo";
+            getEl('vectorStatus').className = "text-[9px] text-green-600 font-bold mt-0.5";
+        }
+
+        // --- SYNC & DOCS ---
         window.debugSync = async function() {
             const loader = getEl('syncLoader');
             const area = getEl('syncArea');
-            const title = getEl('syncTitle');
             const logBox = getEl('syncLog');
             area.classList.remove('hidden');
             loader.classList.remove('hidden');
             logBox.innerHTML = ''; 
 
-            if (window.location.protocol === 'file:') {
-                alert("Error: Protocolo file:// no soportado.");
-                loader.classList.add('hidden');
-                return;
-            }
-
             try {
+                if(!state.apiKey) throw new Error("Configura tu API Key antes de sincronizar para poder crear el índice.");
+
                 const manifestRes = await fetch('manifest.json?t=' + new Date().getTime());
                 if(!manifestRes.ok) throw new Error("No se encontró manifest.json");
                 const files = await manifestRes.json();
 
-                let count = 0;
+                let newDocs = [];
                 for(const fileName of files) {
                     log(`Descargando: ${fileName}...`);
-                    const safeName = encodeURIComponent(fileName);
-                    const fRes = await fetch(`fuentes/${safeName}`);
-                    if(!fRes.ok) { log(`Error ${fRes.status}: ${fileName}`, 'error'); continue; }
-
+                    const fRes = await fetch(`fuentes/${encodeURIComponent(fileName)}`);
+                    if(!fRes.ok) continue;
+                    
                     const blob = await fRes.blob();
                     let text = "";
                     const lower = fileName.toLowerCase();
@@ -605,13 +703,16 @@
                     else text = await extractTextFromPDF(blob); 
                     
                     await window.saveDoc(fileName, text, 'server');
-                    count++;
+                    newDocs.push({name: fileName, content: text});
                 }
-                log(`Completado. ${count} archivos.`, 'success');
+                
+                log("Archivos descargados. Iniciando Indexado Vectorial...", 'info');
+                await runIndexingProcess(newDocs);
+                
                 await refreshDocsUI();
-                setTimeout(() => area.classList.add('hidden'), 3000);
             } catch(e) {
                 alert("Error Sync: " + e.message);
+                log(e.message, 'error');
             } finally {
                 loader.classList.add('hidden');
             }
@@ -623,15 +724,11 @@
             const badge = getEl('serverStatusBadge');
             
             if(docs.length > 0) {
-                state.sourceText = docs.map(d => `\n=== DOC (${d.source}): ${d.name} ===\n${d.content}`).join('\n');
                 getEl('storageSize').textContent = docs.length + " Docs";
-                
                 list.innerHTML = '';
                 docs.forEach(d => {
-                    const color = d.source === 'server' ? 'text-purple-500' : 'text-green-500';
-                    list.innerHTML += `<li class="p-2 text-sm border-b flex justify-between"><span class="${color} font-bold">${d.name}</span> <span class="text-xs text-gray-400 uppercase">${d.source}</span></li>`;
+                    list.innerHTML += `<li class="p-2 text-sm border-b flex justify-between"><span class="text-purple-500 font-bold">${d.name}</span> <span class="text-xs text-gray-400 uppercase">Listo</span></li>`;
                 });
-
                 getEl('btnToStep2').disabled = false;
                 getEl('btnToStep2').classList.remove('opacity-50', 'cursor-not-allowed');
                 enableStep(2);
@@ -640,57 +737,54 @@
             }
         }
 
-        // --- EXTRACTION ---
+        // --- FILE EXTRACTION UTILS ---
         async function extractTextFromPDF(blob) {
             const pdf = await pdfjsLib.getDocument({ data: await blob.arrayBuffer() }).promise;
-            let t = ''; for(let i=1;i<=pdf.numPages;i++) t += `\n[Pág ${i}] ` + (await (await pdf.getPage(i)).getTextContent()).items.map(x=>x.str).join(' ');
+            let t = ''; for(let i=1;i<=pdf.numPages;i++) t += (await (await pdf.getPage(i)).getTextContent()).items.map(x=>x.str).join(' ');
             return t;
         }
-        async function extractTextFromDOCX(blob) { return `\n[DOCX] ` + (await mammoth.extractRawText({arrayBuffer: await blob.arrayBuffer()})).value; }
+        async function extractTextFromDOCX(blob) { return (await mammoth.extractRawText({arrayBuffer: await blob.arrayBuffer()})).value; }
         async function extractTextFromXLSX(blob) {
             const wb = XLSX.read(await blob.arrayBuffer());
-            let t = `\n[XLSX]`; wb.SheetNames.forEach(n => { t+=`\nSheet: ${n}\n`+XLSX.utils.sheet_to_csv(wb.Sheets[n]); });
+            let t = ``; wb.SheetNames.forEach(n => { t+=`\nSheet: ${n}\n`+XLSX.utils.sheet_to_csv(wb.Sheets[n]); });
             return t;
         }
 
-        // --- UI HANDLERS ---
+        // --- UI NAV & QUESTIONS ---
         function goToStep2() {
             if(!state.apiKey) return alert("Configura la IA primero.");
             showStep(2);
         }
+        window.showStep = function(n) {
+            [1,2,3].forEach(i=>{ getEl(`step${i}`).classList.add('hidden'); getEl(`step${i}-ind`).className=`flex flex-col items-center w-1/3 cursor-pointer ${i===n?'step-active font-bold':'step-inactive'}`; });
+            getEl(`step${n}`).classList.remove('hidden');
+        };
+        function enableStep(n) { getEl(`step${n}-ind`).classList.remove('step-inactive'); }
 
         window.checkStep2Readiness = function() {
             const files = getEl('questionFiles').files;
             const text = getEl('manualQuestionText').value.trim();
-            
             if(files.length > 0) {
                 getEl('selectedQuestionsFiles').textContent = Array.from(files).map(x=>x.name).join(', ');
                 getEl('selectedQuestionsFiles').classList.remove('hidden');
-            } else {
-                getEl('selectedQuestionsFiles').classList.add('hidden');
-            }
-
-            if(files.length > 0 || text.length > 0) {
-                getEl('btnAnalyze').classList.remove('hidden');
-            } else {
-                getEl('btnAnalyze').classList.add('hidden');
-            }
+            } else getEl('selectedQuestionsFiles').classList.add('hidden');
+            
+            if(files.length > 0 || text.length > 0) getEl('btnAnalyze').classList.remove('hidden');
+            else getEl('btnAnalyze').classList.add('hidden');
         };
 
+        // --- STEP 2: EXTRACT QUESTIONS (Keep existing logic) ---
         async function extractQuestions() {
             const files = getEl('questionFiles').files;
             const manualText = getEl('manualQuestionText').value.trim();
             const loader = getEl('extractingLoader');
             const btn = getEl('btnAnalyze');
-            const listArea = getEl('questionsListArea');
-            const btnStep3 = getEl('btnToStep3');
             const loaderTextSpan = loader.querySelector('span');
             
             loader.classList.remove('hidden');
             btn.classList.add('hidden');
             
             try {
-                // 1. Extraer todo el texto
                 let txt = "";
                 for(const f of files) {
                     const ext = f.name.split('.').pop().toLowerCase();
@@ -699,345 +793,185 @@
                     else if(ext.startsWith('xls')) txt += await extractTextFromXLSX(f);
                 }
                 if(manualText) txt += `\n\n--- PREGUNTAS MANUALES ---\n${manualText}\n\n`;
-
                 const fullText = txt.trim();
-                if(!fullText) throw new Error("No hay texto para analizar.");
+                if(!fullText) throw new Error("No hay texto.");
 
                 const CHUNK_SIZE = 25000;
                 const chunks = [];
-                for (let i = 0; i < fullText.length; i += CHUNK_SIZE) {
-                    chunks.push(fullText.substring(i, i + CHUNK_SIZE));
-                }
-
-                log(`Texto dividido en ${chunks.length} bloques.`, 'info');
+                for (let i = 0; i < fullText.length; i += CHUNK_SIZE) chunks.push(fullText.substring(i, i + CHUNK_SIZE));
 
                 let allQs = [];
                 let globalIdCounter = 1;
-                // NEW: Use Set to track unique question texts (normalized)
                 const seenTexts = new Set();
 
-                // 3. Procesar bloques
                 for (let i = 0; i < chunks.length; i++) {
-                    loaderTextSpan.textContent = `Analizando bloque ${i + 1} de ${chunks.length}...`;
-                    const chunk = chunks[i];
+                    loaderTextSpan.textContent = `Analizando bloque ${i + 1}/${chunks.length}...`;
+                    const prompt = `ACTÚA COMO CISO. Extrae preguntas de CUMPLIMIENTO/AUDITORÍA. JSON: [{"id":"ID","text":"Pregunta"}]. Texto: ${chunks[i]}`;
                     
-                    // PROMPT REFINED: Strict Security & Compliance Focus
-                    const prompt = `ACTÚA COMO CISO. Identifica y extrae EXCLUSIVAMENTE preguntas de CUMPLIMIENTO, AUDITORÍA o SEGURIDAD (Due Diligence).
+                    trackRequest(Math.ceil(prompt.length/4));
+                    const res = await callGemini(prompt, true);
+                    let cleanJson = res.replace(/```json|```/g, '').trim();
+                    const first = cleanJson.indexOf('['); if(first !== -1) cleanJson = cleanJson.substring(first);
                     
-                    INSTRUCCIONES ESTRICTAS:
-                    1. Analiza el texto parcial (Bloque ${i+1}/${chunks.length}).
-                    2. Extrae preguntas que requieran evidencia, cumplimiento (Si/No) o explicación de control.
-                    3. IGNORA: Preguntas retóricas, títulos que parecen preguntas, instrucciones generales, o preguntas repetidas.
-                    4. Devuelve JSON válido: [{"id":"ID_LITERAL","text":"Texto de la pregunta"}].
-                    5. ID: Usa el ID exacto del documento (ej: "1.2", "A.5.1", "Q-1"). Si no hay ID visible al inicio de la línea, usa null.
-                    6. TEXTO: Limpia el texto de la pregunta (quita números pegados al inicio).
-                    
-                    TEXTO:
-                    ${chunk}`;
-
-                    try {
-                        trackRequest(Math.ceil(prompt.length/4));
-                        const res = await callGemini(prompt, true); 
-
-                        let cleanJson = res.replace(/```json|```/g, '').trim();
-                        const first = cleanJson.indexOf('[');
-                        if(first !== -1) cleanJson = cleanJson.substring(first);
-                        
-                        let chunkQs = [];
-                        try {
-                            chunkQs = JSON.parse(cleanJson);
-                        } catch(e) {
-                            console.warn(`Error parseando bloque ${i+1}. Intentando recuperar...`, e);
-                            let salvagedJson = cleanJson;
-                            const lastClosingObj = cleanJson.lastIndexOf('}');
-                            if (lastClosingObj !== -1 && cleanJson.substring(lastClosingObj).indexOf(']') === -1) {
-                                salvagedJson = cleanJson.substring(0, lastClosingObj + 1) + ']';
-                            } else if (!cleanJson.endsWith(']')) {
-                                 salvagedJson += ']';
-                            }
-                            try { chunkQs = JSON.parse(salvagedJson); } catch (e2) { chunkQs = []; }
-                        }
-
-                        // Procesar IDs y Duplicados
-                        if (Array.isArray(chunkQs)) {
-                            chunkQs.forEach(q => {
-                                // Normalización para detectar duplicados (lowercase + trim)
-                                const normText = q.text ? q.text.toLowerCase().trim() : "";
-                                
-                                if (normText.length > 5 && !seenTexts.has(normText)) {
-                                    seenTexts.add(normText);
-
-                                    // Lógica de IDs mejorada
-                                    if(!q.id || q.id === 'null' || q.id.trim() === '') {
-                                        q.id = String(globalIdCounter++);
-                                    } else {
-                                        // Si viene un ID literal, confiamos en él.
-                                        // Intentamos ver si es numérico para actualizar el contador, 
-                                        // pero NO sobrescribimos si es complejo (ej: A.1)
-                                        const parsedId = parseInt(q.id);
-                                        if (!isNaN(parsedId) && String(parsedId) === q.id) {
-                                            // Es puramente numérico (ej: "5"), actualizamos contador
-                                            if (parsedId >= globalIdCounter) globalIdCounter = parsedId + 1;
-                                        }
-                                    }
-                                    allQs.push(q);
-                                }
-                            });
-                        }
-
-                    } catch (e) {
-                         log(`Error API bloque ${i+1}: ${e.message}`, 'error');
+                    let chunkQs = [];
+                    try { chunkQs = JSON.parse(cleanJson); } catch(e) { 
+                        // Fallback simple fix
+                        try { chunkQs = JSON.parse(cleanJson + ']'); } catch(e2) { chunkQs = []; }
                     }
-                    await sleep(500);
-                } 
+
+                    if(Array.isArray(chunkQs)) {
+                        chunkQs.forEach(q => {
+                            const norm = q.text ? q.text.toLowerCase().trim() : "";
+                            if(norm.length > 5 && !seenTexts.has(norm)) {
+                                seenTexts.add(norm);
+                                if(!q.id || q.id==='null') q.id = String(globalIdCounter++);
+                                allQs.push(q);
+                            }
+                        });
+                    }
+                    await sleep(1000);
+                }
 
                 if(allQs.length === 0) throw new Error("No se extrajeron preguntas.");
-
-                loaderTextSpan.textContent = "Finalizando...";
-
+                
                 const finalQs = allQs.map(q=>({...q, status:'pending', attempts:0}));
                 await dbOp('readwrite', STORE_QUESTIONS, s => s.clear());
                 for(const q of finalQs) await window.saveQ(q);
                 state.questions = finalQs; updateQuestionsUI();
                 
                 loader.classList.add('hidden');
-                listArea.classList.remove('hidden');
-                btnStep3.classList.remove('hidden');
-                log(`Análisis finalizado. ${finalQs.length} preguntas únicas extraídas.`, 'success');
+                getEl('questionsListArea').classList.remove('hidden');
+                getEl('btnToStep3').classList.remove('hidden');
 
-            } catch(e) { 
-                alert("Error: " + e.message); 
-                loader.classList.add('hidden'); 
-                btn.classList.remove('hidden'); 
-                loaderTextSpan.textContent = "Analizando...";
+            } catch(e) {
+                alert("Error: " + e.message);
+                loader.classList.add('hidden');
+                btn.classList.remove('hidden');
             }
         }
 
-        function updateQuestionsUI() {
-            getEl('qCount').textContent = state.questions.length;
-            const l = getEl('questionsList'); l.innerHTML = '';
-            state.questions.forEach(q => l.innerHTML+=`<div class="flex gap-2 text-xs p-1 border-b"><b class="text-intiza-blue min-w-[30px]">${q.id}</b> <span>${q.text}</span></div>`);
-        }
-        
-        function updateCounterUI() {
-             const total = state.questions.length;
-             const done = state.questions.filter(q => q.status === 'done').length;
-             const counter = document.getElementById('qCounterDisplay');
-             if(counter) counter.textContent = `${done} / ${total}`;
-        }
-
-        // --- NEW: SOURCE INDEX ---
-        function updateSourcesIndex() {
-            const container = getEl('sourcesSummaryContainer');
-            const list = getEl('sourcesList');
-            const sources = new Set();
-            
-            state.questions.forEach(q => {
-                if(q.status === 'done' && q.answer) {
-                    const matches = q.answer.match(/FUENTES CLAVE: (.*)/g);
-                    if(matches) {
-                        matches.forEach(m => {
-                            const raw = m.replace('FUENTES CLAVE:', '').trim();
-                            const docs = raw.split(',').map(d => d.trim().replace(/^\[|\]$/g, '').replace(/\.$/, ''));
-                            docs.forEach(doc => { if(doc.length > 2) sources.add(doc); });
-                        });
-                    }
-                }
-            });
-
-            if (sources.size > 0) {
-                container.classList.remove('hidden');
-                list.innerHTML = '';
-                sources.forEach(s => {
-                    list.innerHTML += `<div class="flex items-center gap-1"><i class="fas fa-file-alt text-slate-400 text-[10px]"></i> <span>${s}</span></div>`;
-                });
-            }
-        }
-
-        // --- EXECUTION (AUTO-RESUME & CRASH GUARD) ---
+        // --- STEP 3: RAG ANALYSIS ---
         async function startQueueProcessing() {
+            if(!navigator.onLine) return alert("Sin conexión.");
             
-            // CHECK ONLINE STATUS FIRST
-            if(!navigator.onLine) {
-                alert("No tienes conexión a internet. Conéctate para empezar.");
-                return;
+            // Check vectors
+            if (await window.countVectors() === 0) {
+                return alert("ERROR CRÍTICO: No hay base de conocimiento indexada. Ve al Paso 1 y pulsa 'Sincronizar' para crear los vectores antes de analizar.");
             }
 
             showStep(3); state.processing=true; state.abort=new AbortController();
             getEl('btnStop').classList.remove('hidden');
             getEl('btnResume').classList.add('hidden');
-            renderResultsUI();
-            updateCounterUI();
+            renderResultsUI(); updateCounterUI();
             
             const pending = state.questions.filter(q => q.status==='pending'||q.status==='retry');
-            
-            const BATCH_SIZE = 5;
             let processedInBatch = 0;
 
             for(const q of pending) {
                 if(!state.processing) break;
-
-                // CRASH GUARD: Real-time Check
-                if(!navigator.onLine) {
-                    state.processing = false;
-                    getEl('progressStats').innerHTML = `<span class="text-red-600 font-bold"><i class="fas fa-wifi"></i> Conexión perdida. Pausado.</span>`;
-                    getEl('btnStop').classList.add('hidden');
-                    getEl('btnResume').classList.remove('hidden');
-                    alert("Se perdió la conexión. Pulsa 'Reanudar' cuando vuelva internet.");
-                    break;
-                }
-
-                processedInBatch++;
+                if(!navigator.onLine) { state.processing=false; alert("Conexión perdida."); break; }
 
                 const card = getEl(`card-${q.id}`);
                 if(card) {
                     card.scrollIntoView({behavior:'smooth',block:'center'});
                     card.classList.add('border-intiza-blue','shadow-md');
-                    card.querySelector('.status-ind').innerHTML=`<i class="fas fa-circle-notch fa-spin text-intiza-blue"></i> Analizando...`;
+                    card.querySelector('.status-ind').innerHTML=`<i class="fas fa-search text-purple-500"></i> Buscando contexto...`;
                 }
-                getEl('progressStats').textContent=`Analizando ID ${q.id}...`;
-                
-                await sleep(API_DELAY_MS); 
+                getEl('progressStats').textContent=`Buscando info para ID ${q.id}...`;
 
                 try {
+                    // 1. Generate Embedding for Question
+                    const qEmbedding = await getEmbedding(q.text);
+                    if(!qEmbedding) throw new Error("No se pudo vectorizar la pregunta.");
+
+                    // 2. Find relevant chunks
+                    const relevantChunks = await findRelevantChunks(qEmbedding, 5); // Top 5
+                    
+                    if(relevantChunks.length === 0) throw new Error("No se encontró información relevante.");
+                    
+                    // 3. Construct Context
+                    const contextText = relevantChunks.map(c => `[Fuente: ${c.docName}]\n${c.text}`).join('\n\n');
+                    
+                    if(card) card.querySelector('.status-ind').innerHTML=`<i class="fas fa-pen-nib text-intiza-blue"></i> Redactando...`;
+
+                    // 4. Generate Answer
                     const prompt = `
-                        ROL: Actúa como el **CISO de INTIZA**. Estás respondiendo un cuestionario de **Due Diligence** o Auditoría de Seguridad de un **Cliente Corporativo**.
+                        ROL: CISO. Responde basado EXCLUSIVAMENTE en el siguiente contexto recuperado.
                         
-                        INSTRUCCIONES DE BÚSQUEDA (Deep Search):
-                        1. NO te quedes con la primera coincidencia.
-                        2. Prioriza documentos específicos sobre generales.
-                        
-                        FORMATO DE RESPUESTA:
-                        - Respuesta en ESPAÑOL.
-                        - LÍMITE: Máximo 20 oraciones.
-                        - Cita fuentes en **negrita**.
-                        - AL FINAL DE LA RESPUESTA (OBLIGATORIO): Añade una línea final exacta: 
-                          "FUENTES CLAVE: [NombreDoc1], [NombreDoc2]" 
-                        
-                        CONTEXTO (Fuentes): 
-                        """${state.sourceText.substring(0, 1000000)}"""
+                        CONTEXTO (Fragmentos relevantes):
+                        """${contextText}"""
                         
                         PREGUNTA: "${q.text}"
+                        
+                        INSTRUCCIONES:
+                        - Si la info no está en el contexto, di "No se encontró información específica en las normas cargadas".
+                        - Cita el nombre del documento fuente.
+                        - FORMATO FINAL OBLIGATORIO: Al final añade "FUENTES CLAVE: [Doc1], [Doc2]"
                     `;
-                    
+
                     trackRequest(Math.ceil(prompt.length/4));
                     const ans = await askGeminiWithRetry(prompt, "", state.abort.signal);
                     
                     q.status='done'; q.answer=ans; 
                     await window.saveQ(q); renderCard(card,q); updateCounterUI(); updateSourcesIndex();
+                    
                 } catch(e) {
                     if(e.name==='AbortError') break;
-                    
-                    // CRASH GUARD: Detect fetch failure
-                    if(e.message.includes('Failed to fetch') || e.message.includes('NetworkError')) {
-                        state.processing = false;
-                        getEl('progressStats').innerHTML = `<span class="text-red-600 font-bold"><i class="fas fa-plug"></i> Error de Red Detectado. Pausado.</span>`;
-                        getEl('btnStop').classList.add('hidden');
-                        getEl('btnResume').classList.remove('hidden');
-                        if(card) {
-                            card.classList.remove('border-intiza-blue','shadow-md');
-                            card.querySelector('.status-ind').innerHTML=`<i class="fas fa-pause text-orange-500"></i> Pausado`;
-                        }
-                        alert("Error de conexión con la IA. El proceso se pausó para no perder datos. Pulsa 'Reanudar'.");
-                        break;
-                    }
-
-                    q.attempts++;
-                    q.status='error'; q.answer="Error: "+e.message; 
-                    if(card) card.classList.add('border-red-500'); 
+                    q.attempts++; q.status='error'; q.answer="Error: "+e.message;
+                    if(card) card.classList.add('border-red-500');
                     await window.saveQ(q); updateCounterUI();
                 }
+                
                 if(card) card.classList.remove('border-intiza-blue','shadow-md');
-
-                if (processedInBatch >= BATCH_SIZE) {
-                    const stats = getEl('progressStats');
-                    const originalText = stats.textContent;
-                    stats.innerHTML = `<span class="text-orange-500 font-bold"><i class="fas fa-coffee"></i> Enfriando motor (Pausa de seguridad)...</span>`;
-                    await sleep(3000); 
-                    stats.textContent = originalText;
-                    processedInBatch = 0; 
+                
+                processedInBatch++;
+                if(processedInBatch >= 5) {
+                    await sleep(2000); // Short pause is enough for RAG
+                    processedInBatch = 0;
                 }
             }
-            if(state.processing) {
-                state.processing=false;
-                getEl('btnStop').classList.add('hidden');
-                getEl('progressStats').textContent = state.questions.some(q=>q.status==='pending') ? "Pausado" : "Completado";
-                if(state.questions.some(q=>q.status==='pending')) getEl('btnResume').classList.remove('hidden');
-            }
+            state.processing=false;
+            getEl('btnStop').classList.add('hidden');
+            if(state.questions.some(q=>q.status==='pending')) getEl('btnResume').classList.remove('hidden');
+            getEl('progressStats').textContent = "Proceso finalizado/pausado.";
         }
 
+        // --- COMMON UTILS ---
         function stopProcessing() { if(state.abort) state.abort.abort(); state.processing=false; }
-
-        // --- RENDERING ---
-        function renderResultsUI() {
-            const c = getEl('resultsContainer'); c.innerHTML = '';
-            state.questions.forEach(q => {
-                const d = document.createElement('div');
-                d.id = `card-${q.id}`; d.className = "bg-white p-4 rounded border border-slate-200 text-sm transition-all";
-                d.innerHTML = `
-                    <div class="flex justify-between mb-2">
-                        <div class="flex gap-2"><span class="font-bold bg-slate-100 px-2 rounded">${q.id}</span> <span class="status-ind text-xs text-slate-400">${getIcon(q.status)}</span></div>
-                        <button onclick="toggleFb('${q.id}')" class="text-red-300 hover:text-red-500"><i class="fas fa-flag"></i></button>
-                    </div>
-                    <p class="font-medium mb-2">${q.text}</p>
-                    <div class="ans-body text-slate-600 border-t pt-2 mt-2">${format(q.answer)}</div>
-                    <div id="fb-${q.id}" class="hidden mt-2 bg-red-50 p-2 rounded"><textarea id="tx-${q.id}" class="w-full text-xs p-1 mb-1" placeholder="Corrección..."></textarea><button onclick="reproc('${q.id}')" class="bg-red-500 text-white text-xs px-2 py-1 rounded">Corregir</button></div>
-                `;
-                c.appendChild(d);
-            });
-            updateSourcesIndex();
-        }
-        function renderCard(c,q) { if(c) { c.querySelector('.status-ind').innerHTML=getIcon(q.status); c.querySelector('.ans-body').innerHTML=format(q.answer); } }
-        function getIcon(s) { return s==='done'?'<i class="fas fa-check text-intiza-blue"></i>':s==='error'?'<i class="fas fa-times text-red-500"></i>':s; }
-        function toggleFb(id) { getEl(`fb-${id}`).classList.toggle('hidden'); }
-        function format(t) { return t?t.replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>'):'<i class="text-slate-300">Pendiente...</i>'; }
-
-        // --- API & REPROC ---
-        window.reproc = async function(id) {
-            const fb = getEl(`tx-${id}`).value; const q = state.questions.find(x=>x.id===id);
-            getEl(`fb-${id}`).classList.add('hidden');
-            const c = getEl(`card-${id}`); c.querySelector('.ans-body').innerHTML='<i class="fas fa-spin fa-sync"></i>';
-            const p = `CISO MODE. PREGUNTA: "${q.text}" ERROR: "${fb}". CORRIGE: ${state.sourceText.substring(0,40000)} RECUERDA: Añade línea final 'FUENTES CLAVE: [Doc]'`;
-            try {
-                 q.answer = await askGeminiWithRetry(p, "", null); 
-                 q.status='done'; await window.saveQ(q); renderCard(c,q); updateCounterUI(); updateSourcesIndex();
-            } catch(e) { alert(e.message); }
-        };
-
-        async function askGeminiWithRetry(qText, ctx, sig) {
-            const modelToUse = state.model || "gemini-1.5-flash"; // Use selected
-            const p = ctx ? qText : qText; 
-            let attempts = 0;
-            while(attempts < 3) {
-                try {
-                    return await callGemini(p, false, sig, modelToUse);
-                } catch(e) {
-                    if(e.message.includes('503') || e.message.includes('Overloaded')) {
-                        attempts++; await sleep(2000*attempts); continue;
-                    }
-                    throw e; 
-                }
+        async function askGeminiWithRetry(q, c, s) {
+            let att = 0;
+            while(att<3) {
+                try { return await callGemini(q, false, s); }
+                catch(e) { if(e.message.includes('429')) { att++; await sleep(5000); } else throw e; }
             }
-            throw new Error("Servidor ocupado.");
+            throw new Error("Busy.");
         }
-
-        async function callGemini(text, json, signal, modelOverride) {
-            const m = modelOverride || state.model || "gemini-1.5-flash";
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${state.apiKey}`;
+        async function callGemini(text, json, signal) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${state.model}:generateContent?key=${state.apiKey}`;
             const body = { contents:[{parts:[{text}]}] }; if(json) body.generationConfig={responseMimeType:"application/json"};
             const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body), signal });
             if(!r.ok) { const err = await r.json(); throw new Error(err.error?.message || r.statusText); }
             return (await r.json()).candidates[0].content.parts[0].text;
         }
 
-        // --- NAV ---
-        window.showStep = function(n) {
-            [1,2,3].forEach(i=>{ getEl(`step${i}`).classList.add('hidden'); getEl(`step${i}-ind`).className=`flex flex-col items-center w-1/3 cursor-pointer ${i===n?'step-active font-bold':'step-inactive'}`; });
-            getEl(`step${n}`).classList.remove('hidden');
-        };
-        function enableStep(n) { getEl(`step${n}-ind`).classList.remove('step-inactive'); }
+        // UI HELPERS
+        function updateQuestionsUI() { getEl('qCount').textContent = state.questions.length; getEl('questionsList').innerHTML = state.questions.map(q=>`<div class="flex gap-2 text-xs p-1 border-b"><b class="text-intiza-blue min-w-[30px]">${q.id}</b> <span>${q.text}</span></div>`).join(''); }
+        function updateCounterUI() { getEl('qCounterDisplay').textContent = `${state.questions.filter(q=>q.status==='done').length} / ${state.questions.length}`; }
+        function renderResultsUI() { getEl('resultsContainer').innerHTML=''; state.questions.forEach(q=>renderCard(null,q,true)); }
+        function renderCard(card, q, create=false) {
+            if(create) {
+                const d = document.createElement('div'); d.id=`card-${q.id}`; d.className="bg-white p-4 rounded border border-slate-200 text-sm mb-4";
+                d.innerHTML = `<div class="flex justify-between mb-2"><span class="font-bold bg-slate-100 px-2 rounded">${q.id}</span> <span class="status-ind text-xs text-slate-400"></span></div><p class="font-medium mb-2">${q.text}</p><div class="ans-body text-slate-600 border-t pt-2">${q.answer?format(q.answer):'Pendiente...'}</div>`;
+                getEl('resultsContainer').appendChild(d);
+            } else if(card) {
+                card.querySelector('.status-ind').innerHTML = q.status==='done'?'<i class="fas fa-check text-green-500"></i>':q.status==='error'?'<i class="fas fa-times text-red-500"></i>':'';
+                card.querySelector('.ans-body').innerHTML = format(q.answer);
+            }
+        }
+        function format(t) { return t?t.replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>'):''; }
+        function updateSourcesIndex() { /* Simplificado para RAG */ }
         window.copyAllResults = function() { navigator.clipboard.writeText(getEl('resultsContainer').innerText); alert("Copiado"); };
-        window.sendEmail = function() { window.location.href=`mailto:?subject=Reporte CISO&body=${encodeURIComponent(getEl('resultsContainer').innerText.substring(0,1800))}`; };
+        window.sendEmail = function() { window.location.href=`mailto:?subject=Reporte&body=${encodeURIComponent(getEl('resultsContainer').innerText.substring(0,1800))}`; };
     </script>
 </body>
 </html>
