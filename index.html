@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v9.3 (2.5 Flash Compatibility)</title>
+    <title>INTIZA CISO AI OFFICER v9.4 (RAG Multi-Source)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -85,7 +85,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-white opacity-90">MODO CORPORATIVO</div>
-                    <div class="text-green-300 text-[10px] font-mono">v9.3 2.5-Ready</div>
+                    <div class="text-green-300 text-[10px] font-mono">v9.4 RAG Multi-Source</div>
                 </div>
             </div>
         </div>
@@ -161,7 +161,7 @@
                 <div class="w-full sm:w-48">
                     <label class="block text-[10px] font-bold text-slate-500 mb-1">Modelo Preferido</label>
                     <select id="modelSelector" class="w-full p-2 border border-slate-300 rounded text-sm bg-slate-50 font-bold text-slate-700" onchange="manualModelChange()">
-                        <option value="auto">⚡ Automático</option>
+                        <option value="auto">⚡ Automático (2.5 Flash)</option>
                         <option value="gemini-2.5-flash">🧪 Gemini 2.5 Flash</option>
                         <option value="gemini-2.0-flash">🚀 Gemini 2.0 Flash</option>
                         <option value="gemini-1.5-flash">📦 Gemini 1.5 Flash</option>
@@ -370,14 +370,14 @@
 
     <script>
         // --- UTILS & CONFIG ---
-        const API_DELAY_MS = 4000; // Increased delay for 2.5 Flash safety
-        const RPM_LIMIT = 15; // Conservative RPM limit for preview models
+        const API_DELAY_MS = 4000; // Increased delay for safety
+        const RPM_LIMIT = 15; // Conservative RPM
         const TPM_LIMIT = 1000000; // 1M Token Limit for 2.5 Flash
         const WINDOW_MS = 60000; 
         const CHUNK_SIZE = 1000; 
         const CHUNK_OVERLAP = 100;
 
-        // PRIORIDAD ACTUALIZADA: 2.5 FLASH -> 2.0 -> 1.5 (Legacy)
+        // PRIORIDAD: 2.5 FLASH -> 2.0 -> 1.5 (Legacy)
         const MODEL_CANDIDATES = [
             "gemini-2.5-flash",       
             "gemini-2.0-flash",       
@@ -475,7 +475,6 @@
             getEl('connectionStatus').classList.remove('hidden');
             let foundModel = null;
             
-            // Check manual selector first
             const manualSel = getEl('modelSelector').value;
             const candidates = manualSel !== 'auto' ? [manualSel] : MODEL_CANDIDATES;
 
@@ -609,7 +608,7 @@
             return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
         }
 
-        async function findRelevantChunks(queryEmbedding, limit = 5) {
+        async function findRelevantChunks(queryEmbedding, limit = 8) { // UPDATED TO 8 CHUNKS
             if (state.vectors.length === 0) {
                 state.vectors = await window.loadVectors();
             }
@@ -889,27 +888,29 @@
                     const qEmbedding = await getEmbedding(q.text);
                     if(!qEmbedding) throw new Error("No se pudo vectorizar la pregunta.");
 
-                    const relevantChunks = await findRelevantChunks(qEmbedding, 5); 
+                    const relevantChunks = await findRelevantChunks(qEmbedding, 8); // TOP 8 for Diversity
                     
                     if(relevantChunks.length === 0) throw new Error("No se encontró información relevante.");
                     
                     const contextText = relevantChunks.map(c => `[Fuente: ${c.docName}]\n${c.text}`).join('\n\n');
                     
-                    const tokenEst = Math.ceil(contextText.length / 4) + 200; // Approx
+                    const tokenEst = Math.ceil(contextText.length / 4) + 200; 
                     if(card) card.querySelector('.status-ind').innerHTML=`<span class="text-xs text-gray-500 mr-2"><i class="fas fa-coins"></i> ${tokenEst} tokens</span> <i class="fas fa-pen-nib text-intiza-blue"></i> Redactando...`;
 
+                    // UPDATED PROMPT: SYNTHESIS FOCUS
                     const prompt = `
-                        ROL: CISO. Responde basado EXCLUSIVAMENTE en el siguiente contexto recuperado.
+                        ROL: CISO. Tu tarea es responder la pregunta SINTETIZANDO información de TODOS los fragmentos de contexto proporcionados. Si la respuesta requiere combinar datos de dos documentos distintos, hazlo.
                         
-                        CONTEXTO (Fragmentos relevantes):
+                        CONTEXTO (Fragmentos recuperados de la biblioteca normativa):
                         """${contextText}"""
                         
                         PREGUNTA: "${q.text}"
                         
-                        INSTRUCCIONES:
-                        - Si la info no está en el contexto, di "No se encontró información específica en las normas cargadas".
-                        - Cita el nombre del documento fuente.
-                        - FORMATO FINAL OBLIGATORIO: Al final añade "FUENTES CLAVE: [Doc1], [Doc2]"
+                        INSTRUCCIONES CLAVE:
+                        1. NO te quedes solo con el primer fragmento. Busca en todos.
+                        2. Si la respuesta no está, di "No se encontró información específica".
+                        3. Cita explícitamente el nombre del documento del que sacas cada dato.
+                        4. FORMATO FINAL OBLIGATORIO: Al final de la respuesta, añade una línea con: "FUENTES CLAVE: [NombreDoc1], [NombreDoc2]"
                     `;
 
                     trackRequest(tokenEst);
@@ -982,7 +983,35 @@
             }
         }
         function format(t) { return t?t.replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>'):''; }
-        function updateSourcesIndex() { }
+        
+        // SOURCE INDEX UPDATER
+        function updateSourcesIndex() { 
+            const container = getEl('sourcesSummaryContainer');
+            const list = getEl('sourcesList');
+            const sources = new Set();
+            
+            state.questions.forEach(q => {
+                if(q.status === 'done' && q.answer) {
+                    const matches = q.answer.match(/FUENTES CLAVE: (.*)/g);
+                    if(matches) {
+                        matches.forEach(m => {
+                            const raw = m.replace('FUENTES CLAVE:', '').trim();
+                            const docs = raw.split(',').map(d => d.trim().replace(/^\[|\]$/g, '').replace(/\.$/, ''));
+                            docs.forEach(doc => { if(doc.length > 2) sources.add(doc); });
+                        });
+                    }
+                }
+            });
+
+            if (sources.size > 0) {
+                container.classList.remove('hidden');
+                list.innerHTML = '';
+                sources.forEach(s => {
+                    list.innerHTML += `<div class="flex items-center gap-1"><i class="fas fa-file-alt text-slate-400 text-[10px]"></i> <span>${s}</span></div>`;
+                });
+            }
+        }
+        
         window.copyAllResults = function() { navigator.clipboard.writeText(getEl('resultsContainer').innerText); alert("Copiado"); };
         window.sendEmail = function() { window.location.href=`mailto:?subject=Reporte&body=${encodeURIComponent(getEl('resultsContainer').innerText.substring(0,1800))}`; };
         window.reproc = async function(id) {
