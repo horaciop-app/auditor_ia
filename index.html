@@ -867,7 +867,15 @@
                             const norm = q.text ? q.text.toLowerCase().trim() : "";
                             if(norm.length > 5 && !seenTexts.has(norm)) {
                                 seenTexts.add(norm);
-                                if(!q.id || q.id==='null') q.id = String(globalIdCounter++);
+                                
+                                // ID SANITIZATION & LOGIC
+                                if(!q.id || q.id==='null') {
+                                    q.id = String(globalIdCounter++);
+                                } else {
+                                    // Remove quotes from ID to prevent HTML break
+                                    q.id = String(q.id).replace(/['"]/g, '');
+                                }
+                                
                                 allQs.push(q);
                             }
                         });
