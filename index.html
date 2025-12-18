@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v9.1 (Overload Guard)</title>
+    <title>INTIZA CISO AI OFFICER v9.2 (Model Selector & Token Audit)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -85,7 +85,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-white opacity-90">MODO CORPORATIVO</div>
-                    <div class="text-green-300 text-[10px] font-mono">v9.1 Overload Guard</div>
+                    <div class="text-green-300 text-[10px] font-mono">v9.2 Token Audit</div>
                 </div>
             </div>
         </div>
@@ -153,11 +153,23 @@
                 </div>
             </div>
             
-            <div class="flex flex-col sm:flex-row gap-3">
-                <input type="password" id="apiKeyInput" placeholder="Pega aquí tu API Key..." class="flex-1 p-2 border border-slate-300 rounded focus:ring-2 focus:ring-intiza-blue outline-none font-mono text-sm">
+            <div class="flex flex-col sm:flex-row gap-3 items-end">
+                <div class="flex-1 w-full">
+                    <input type="password" id="apiKeyInput" placeholder="Pega aquí tu API Key..." class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-intiza-blue outline-none font-mono text-sm">
+                </div>
                 
-                <button id="btnAutoConnect" onclick="startAutoDetection()" class="w-full sm:w-auto bg-intiza-blue hover:bg-intiza-dark text-white px-4 py-2 rounded font-bold text-sm shadow flex items-center justify-center gap-2 transition-all">
-                    <i class="fas fa-magic"></i> Conexión Inteligente
+                <div class="w-full sm:w-48">
+                    <label class="block text-[10px] font-bold text-slate-500 mb-1">Modelo Preferido</label>
+                    <select id="modelSelector" class="w-full p-2 border border-slate-300 rounded text-sm bg-slate-50 font-bold text-slate-700" onchange="manualModelChange()">
+                        <option value="auto">⚡ Automático (Recomendado)</option>
+                        <option value="gemini-1.5-flash">🚀 Gemini 1.5 Flash (4M TPM)</option>
+                        <option value="gemini-2.5-flash">🧪 Gemini 2.5 Flash (Preview)</option>
+                        <option value="gemini-1.5-pro">🧠 Gemini 1.5 Pro (Potente)</option>
+                    </select>
+                </div>
+
+                <button id="btnAutoConnect" onclick="startAutoDetection()" class="w-full sm:w-auto bg-intiza-blue hover:bg-intiza-dark text-white px-4 py-2 rounded font-bold text-sm shadow flex items-center justify-center gap-2 transition-all h-[38px]">
+                    <i class="fas fa-plug"></i> Conectar
                 </button>
             </div>
 
@@ -365,14 +377,13 @@
         const CHUNK_SIZE = 1000; 
         const CHUNK_OVERLAP = 100;
 
-        // LISTA DE CANDIDATOS PARA AUTO-DETECCIÓN
+        // PRIORIDAD: 1.5 FLASH (4M TPM) -> 2.5 FLASH (1M TPM) -> 1.5 PRO
         const MODEL_CANDIDATES = [
+            "gemini-1.5-flash",       
+            "gemini-1.5-flash-001",
+            "gemini-1.5-flash-002",
             "gemini-2.5-flash",       
             "gemini-2.0-flash",       
-            "gemini-1.5-flash",       
-            "gemini-1.5-flash-002",   
-            "gemini-1.5-flash-8b",    
-            "gemini-2.5-pro",         
             "gemini-1.5-pro"          
         ];
 
@@ -463,7 +474,12 @@
             localStorage.setItem('ciso_key', key);
             getEl('connectionStatus').classList.remove('hidden');
             let foundModel = null;
-            for (const model of MODEL_CANDIDATES) {
+            
+            // Check manual selector first
+            const manualSel = getEl('modelSelector').value;
+            const candidates = manualSel !== 'auto' ? [manualSel] : MODEL_CANDIDATES;
+
+            for (const model of candidates) {
                 getEl('detectMsg').textContent = `Probando: ${model}...`;
                 await sleep(200); 
                 if (await testModelConnection(key, model)) { foundModel = model; break; }
@@ -480,6 +496,13 @@
             }
         };
 
+        window.manualModelChange = function() {
+            const sel = getEl('modelSelector').value;
+            if(sel !== 'auto' && state.apiKey) {
+                if(confirm("¿Cambiar modelo manualmente?")) startAutoDetection();
+            }
+        }
+
         async function testModelConnection(key, modelName) {
             try {
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${key}`;
@@ -491,7 +514,13 @@
         window.onload = async function() {
             if(state.apiKey) {
                 getEl('apiKeyInput').value = state.apiKey;
-                if(state.model) { getEl('activeModelBadge').classList.remove('hidden'); getEl('modelNameDisplay').textContent = state.model; }
+                if(state.model) { 
+                    getEl('activeModelBadge').classList.remove('hidden'); 
+                    getEl('modelNameDisplay').textContent = state.model;
+                    // Try to set selector if matches
+                    const sel = getEl('modelSelector');
+                    if(Array.from(sel.options).some(o=>o.value===state.model)) sel.value = state.model; 
+                }
             }
             
             await refreshDocsUI();
@@ -867,7 +896,8 @@
                     
                     const contextText = relevantChunks.map(c => `[Fuente: ${c.docName}]\n${c.text}`).join('\n\n');
                     
-                    if(card) card.querySelector('.status-ind').innerHTML=`<i class="fas fa-pen-nib text-intiza-blue"></i> Redactando...`;
+                    const tokenEst = Math.ceil(contextText.length / 4) + 200; // Approx
+                    if(card) card.querySelector('.status-ind').innerHTML=`<span class="text-xs text-gray-500 mr-2"><i class="fas fa-coins"></i> ${tokenEst} tokens</span> <i class="fas fa-pen-nib text-intiza-blue"></i> Redactando...`;
 
                     const prompt = `
                         ROL: CISO. Responde basado EXCLUSIVAMENTE en el siguiente contexto recuperado.
@@ -883,7 +913,7 @@
                         - FORMATO FINAL OBLIGATORIO: Al final añade "FUENTES CLAVE: [Doc1], [Doc2]"
                     `;
 
-                    trackRequest(Math.ceil(prompt.length/4));
+                    trackRequest(tokenEst);
                     const ans = await askGeminiWithRetry(prompt, false, state.abort.signal);
                     
                     q.status='done'; q.answer=ans; 
