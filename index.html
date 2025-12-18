@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v9.2 (Model Selector & Token Audit)</title>
+    <title>INTIZA CISO AI OFFICER v9.3 (2.5 Flash Compatibility)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -85,7 +85,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-white opacity-90">MODO CORPORATIVO</div>
-                    <div class="text-green-300 text-[10px] font-mono">v9.2 Token Audit</div>
+                    <div class="text-green-300 text-[10px] font-mono">v9.3 2.5-Ready</div>
                 </div>
             </div>
         </div>
@@ -108,7 +108,7 @@
                         <i class="fas fa-tachometer-alt text-blue-400"></i>
                     </div>
                     <div class="text-sm font-mono font-bold text-slate-700 mt-1">
-                        <span id="rpmVal" class="text-blue-600">0</span> / <span class="text-slate-400">2000</span>
+                        <span id="rpmVal" class="text-blue-600">0</span> / <span class="text-slate-400">15</span>
                     </div>
                     <div class="w-full bg-slate-100 h-1.5 rounded-full mt-1">
                         <div id="rpmBar" class="bg-blue-500 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
@@ -122,7 +122,7 @@
                         <i class="fas fa-bolt text-purple-400"></i>
                     </div>
                     <div class="text-sm font-mono font-bold text-slate-700 mt-1">
-                        <span id="tpmVal" class="text-purple-600">0</span> / <span class="text-slate-400">4M</span>
+                        <span id="tpmVal" class="text-purple-600">0</span> / <span class="text-slate-400">1M</span>
                     </div>
                     <div class="w-full bg-slate-100 h-1.5 rounded-full mt-1">
                         <div id="tpmBar" class="bg-purple-500 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
@@ -161,10 +161,10 @@
                 <div class="w-full sm:w-48">
                     <label class="block text-[10px] font-bold text-slate-500 mb-1">Modelo Preferido</label>
                     <select id="modelSelector" class="w-full p-2 border border-slate-300 rounded text-sm bg-slate-50 font-bold text-slate-700" onchange="manualModelChange()">
-                        <option value="auto">⚡ Automático (Recomendado)</option>
-                        <option value="gemini-1.5-flash">🚀 Gemini 1.5 Flash (4M TPM)</option>
-                        <option value="gemini-2.5-flash">🧪 Gemini 2.5 Flash (Preview)</option>
-                        <option value="gemini-1.5-pro">🧠 Gemini 1.5 Pro (Potente)</option>
+                        <option value="auto">⚡ Automático</option>
+                        <option value="gemini-2.5-flash">🧪 Gemini 2.5 Flash</option>
+                        <option value="gemini-2.0-flash">🚀 Gemini 2.0 Flash</option>
+                        <option value="gemini-1.5-flash">📦 Gemini 1.5 Flash</option>
                     </select>
                 </div>
 
@@ -370,20 +370,20 @@
 
     <script>
         // --- UTILS & CONFIG ---
-        const API_DELAY_MS = 2000; 
-        const RPM_LIMIT = 2000; 
-        const TPM_LIMIT = 4000000;
+        const API_DELAY_MS = 4000; // Increased delay for 2.5 Flash safety
+        const RPM_LIMIT = 15; // Conservative RPM limit for preview models
+        const TPM_LIMIT = 1000000; // 1M Token Limit for 2.5 Flash
         const WINDOW_MS = 60000; 
         const CHUNK_SIZE = 1000; 
         const CHUNK_OVERLAP = 100;
 
-        // PRIORIDAD: 1.5 FLASH (4M TPM) -> 2.5 FLASH (1M TPM) -> 1.5 PRO
+        // PRIORIDAD ACTUALIZADA: 2.5 FLASH -> 2.0 -> 1.5 (Legacy)
         const MODEL_CANDIDATES = [
-            "gemini-1.5-flash",       
-            "gemini-1.5-flash-001",
-            "gemini-1.5-flash-002",
             "gemini-2.5-flash",       
             "gemini-2.0-flash",       
+            "gemini-1.5-flash",
+            "gemini-1.5-flash-001",
+            "gemini-1.5-flash-002",
             "gemini-1.5-pro"          
         ];
 
@@ -517,7 +517,6 @@
                 if(state.model) { 
                     getEl('activeModelBadge').classList.remove('hidden'); 
                     getEl('modelNameDisplay').textContent = state.model;
-                    // Try to set selector if matches
                     const sel = getEl('modelSelector');
                     if(Array.from(sel.options).some(o=>o.value===state.model)) sel.value = state.model; 
                 }
