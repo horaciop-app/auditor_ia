@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v10.6 (Control Total)</title>
+    <title>INTIZA CISO AI OFFICER v10.7 (Deep Repair)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -85,7 +85,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-white opacity-90">MODO CORPORATIVO</div>
-                    <div class="text-green-300 text-[10px] font-mono">v10.6 Control Total</div>
+                    <div class="text-green-300 text-[10px] font-mono">v10.7 Deep Repair</div>
                 </div>
             </div>
         </div>
@@ -316,13 +316,13 @@
 
         <!-- STEP 3: Results (NEW HEADER FOR RESUME & TIMER) -->
         <div id="step3" class="hidden step-content bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <!-- RECOVERY ALERT -->
+            <!-- RECOVERY ALERT (Always there if issues exist) -->
             <div id="recoveryAlert" class="hidden mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg flex justify-between items-center shadow-sm">
                 <div class="flex items-center gap-3">
                     <div class="bg-amber-100 p-2 rounded-full text-amber-600"><i class="fas fa-exclamation-triangle"></i></div>
                     <div>
-                        <h4 class="font-bold text-amber-800 text-sm">Sesión Interrumpida Detectada</h4>
-                        <p class="text-xs text-amber-700" id="recoveryMsg">Se encontraron preguntas pendientes.</p>
+                        <h4 class="font-bold text-amber-800 text-sm">Problemas Detectados</h4>
+                        <p class="text-xs text-amber-700" id="recoveryMsg">Preguntas vacías.</p>
                     </div>
                 </div>
             </div>
@@ -348,8 +348,8 @@
                     </div>
 
                     <div class="flex gap-2">
-                         <!-- BOTÓN DE RESCATE SIEMPRE DISPONIBLE (REMOVED HIDDEN CLASS FORCED) -->
-                         <button id="btnForceRetry" onclick="forceRetryPending()" class="text-xs bg-orange-100 text-orange-700 border border-orange-200 px-3 py-1 rounded font-bold hover:bg-orange-200 shadow-sm animate-pulse" title="Revisar preguntas vacías">
+                         <!-- BOTÓN DE RESCATE SIEMPRE VISIBLE PARA CONTROL TOTAL -->
+                         <button id="btnForceRetry" onclick="forceRetryPending()" class="text-xs bg-orange-100 text-orange-700 border border-orange-200 px-3 py-1 rounded font-bold hover:bg-orange-200 shadow-sm transition-all" title="Buscar preguntas vacías y reintentar">
                             <i class="fas fa-ambulance"></i> REPARAR
                          </button>
                          <button id="btnStop" onclick="stopProcessing()" class="hidden text-xs bg-red-100 text-red-600 border border-red-200 px-3 py-1 rounded font-bold hover:bg-red-200"><i class="fas fa-pause"></i> PAUSAR</button>
@@ -560,21 +560,8 @@
                 state.questions = qs.sort((a,b) => a.id.localeCompare(b.id, undefined, {numeric: true}));
                 updateQuestionsUI(); renderResultsUI(); enableStep(3);
                 
-                // --- HONEST ZOMBIE DETECTION ---
-                // Identify questions marked 'done' but with no valid answer
-                const zombies = state.questions.filter(q => q.status === 'done' && (!q.answer || q.answer.trim().length < 5));
-                
-                const pending = state.questions.filter(q => q.status === 'pending' || q.status === 'retry');
-                
-                // ALWAYS SHOW RECOVERY ALERT IF THERE ARE ZOMBIES
-                if(zombies.length > 0) {
-                    getEl('recoveryAlert').classList.remove('hidden');
-                    getEl('recoveryMsg').innerHTML = `<span class="font-bold text-red-600">ATENCIÓN:</span> Hay ${zombies.length} preguntas vacías. Pulsa REPARAR.`;
-                } else if(pending.length > 0) {
-                    getEl('btnResume').classList.remove('hidden');
-                }
-                
-                updateCounterUI();
+                // AUTO-RECOVERY LOGIC - ALWAYS SHOW REPAIR BTN IF NOT 100% DONE
+                updateCounterUI(); 
                 updateSourcesIndex();
             }
             
@@ -1102,10 +1089,13 @@
             getEl('qCounterDisplay').textContent = `${doneCount} / ${state.questions.length}`; 
             
             // Check for visibility of rescue button
-            // If the work is not fully done, show the repair button
-            /* Removed hiding logic as requested by user - button is always visible in HTML unless removed by logic, 
-               but here we ensure we don't hide it. Actually, we should allow it to be visible. */
-             // getEl('btnForceRetry').classList.remove('hidden'); // This is redundant if we removed 'hidden' class from HTML, but keeps it safe.
+            /* Always show if not 100% complete OR if explicitly requested in HTML logic */
+            if (doneCount < state.questions.length) {
+                 getEl('btnForceRetry').classList.remove('hidden'); 
+            } else {
+                 // Even if 100%, keep it hidden unless manually triggered by zombie check
+                 // but we removed the hidden logic for simplicity in v10.6
+            }
         }
         
         function renderResultsUI() { getEl('resultsContainer').innerHTML=''; state.questions.forEach(q=>renderCard(null,q,true)); }
@@ -1113,11 +1103,19 @@
         function renderCard(card, q, create=false) {
             if(create) {
                 const d = document.createElement('div'); d.id=`card-${q.id}`; d.className="bg-white p-4 rounded border border-slate-200 text-sm mb-4 transition-all";
-                // Added Flag Button back
+                
+                // --- DEBUG STATUS LINE ---
+                const debugInfo = `<div class="text-[9px] text-slate-300 font-mono mb-1">ID: ${q.id} | Status: ${q.status} | Len: ${q.answer ? q.answer.length : 0}</div>`;
+                
+                // Added Flag Button back & Individual Retry Button
                 d.innerHTML = `
+                    ${debugInfo}
                     <div class="flex justify-between mb-2">
                         <div class="flex gap-2"><span class="font-bold bg-slate-100 px-2 rounded">${q.id}</span> <span class="status-ind text-xs text-slate-400"></span></div>
-                        <button onclick="toggleFb('${q.id}')" class="text-slate-300 hover:text-red-500 transition-colors" title="Corregir respuesta"><i class="fas fa-flag"></i></button>
+                        <div class="flex gap-2">
+                             <button onclick="reproc('${q.id}')" class="text-blue-300 hover:text-blue-500" title="Reintentar Individualmente"><i class="fas fa-sync"></i></button>
+                             <button onclick="toggleFb('${q.id}')" class="text-slate-300 hover:text-red-500 transition-colors" title="Corregir respuesta"><i class="fas fa-flag"></i></button>
+                        </div>
                     </div>
                     <p class="font-medium mb-2 text-slate-800">${q.text}</p>
                     <div class="ans-body text-slate-600 border-t pt-2 mt-2 leading-relaxed">${q.answer?format(q.answer):'<span class="italic text-slate-400">Pendiente...</span>'}</div>
@@ -1164,31 +1162,43 @@
         window.sendEmail = function() { window.location.href=`mailto:?subject=Reporte&body=${encodeURIComponent(getEl('resultsContainer').innerText.substring(0,1800))}`; };
         
         window.reproc = async function(id) {
-            const fb = getEl(`tx-${id}`).value; 
-            if(!fb) return alert("Escribe una instrucción para corregir.");
+            // Manual Reproc Logic - works for both Retry Button and Flag Button
+            const fbElem = getEl(`tx-${id}`);
+            const fb = fbElem ? fbElem.value : ""; 
             
             const q = state.questions.find(x=>x.id===id);
-            getEl(`fb-${id}`).classList.add('hidden');
+            if(getEl(`fb-${id}`)) getEl(`fb-${id}`).classList.add('hidden');
             
             const card = getEl(`card-${id}`);
-            card.querySelector('.ans-body').innerHTML='<div class="flex items-center gap-2 text-orange-500"><i class="fas fa-sync fa-spin"></i> Aplicando corrección...</div>';
+            card.querySelector('.ans-body').innerHTML='<div class="flex items-center gap-2 text-orange-500"><i class="fas fa-sync fa-spin"></i> Re-procesando...</div>';
             
-            // Reprocess using RAG context again but with feedback injection
             try {
+                // FORCE RE-EMBEDDING
                 const qEmbedding = await getEmbedding(q.text);
                 const relevantChunks = await findRelevantChunks(qEmbedding, 8);
                 const contextText = relevantChunks.map(c => `[Fuente: ${c.docName}]\n${c.text}`).join('\n\n');
                 
-                const prompt = `
-                    ROL: CISO de INTIZA (Corrección de Respuesta).
-                    CONTEXTO TÉCNICO: """${contextText}"""
-                    PREGUNTA: "${q.text}"
-                    
-                    CRÍTICA DEL HUMANO (CORRECCIÓN): "${fb}"
-                    
-                    INSTRUCCIÓN: Reescribe la respuesta anterior obedeciendo la corrección del humano. Si el documento dice A pero el humano dice B, prioriza la explicación del humano pero menciona lo que dice el documento como contexto. Mantén el tono profesional "Nosotros".
-                    FORMATO FINAL: Añade "FUENTES CLAVE: [...]"
-                `;
+                let prompt = "";
+                if(fb) {
+                     // CORRECTION MODE
+                     prompt = `
+                        ROL: CISO de INTIZA (Corrección de Respuesta).
+                        CONTEXTO TÉCNICO: """${contextText}"""
+                        PREGUNTA: "${q.text}"
+                        CRÍTICA DEL HUMANO: "${fb}"
+                        INSTRUCCIÓN: Reescribe la respuesta obedeciendo la crítica.
+                        FORMATO FINAL: Añade "FUENTES CLAVE: [...]"
+                    `;
+                } else {
+                    // STANDARD RETRY MODE
+                    prompt = `
+                        ROL: CISO de INTIZA.
+                        CONTEXTO: """${contextText}"""
+                        PREGUNTA: "${q.text}"
+                        INSTRUCCIÓN: Responde profesionalmente como proveedor SaaS.
+                        FORMATO FINAL: Añade "FUENTES CLAVE: [...]"
+                    `;
+                }
                 
                 q.answer = await askGeminiWithRetry(prompt, false, null); 
                 q.status='done'; 
@@ -1196,7 +1206,7 @@
                 renderCard(card,q); 
                 updateCounterUI();
             } catch(e) { 
-                alert("Error al corregir: " + e.message);
+                alert("Error: " + e.message);
                 q.status='error';
                 renderCard(card,q);
             }
@@ -1205,39 +1215,36 @@
         function toggleFb(id) { getEl(`fb-${id}`).classList.toggle('hidden'); }
         function getIcon(s) { return s==='done'?'<i class="fas fa-check text-intiza-blue"></i>':s==='error'?'<i class="fas fa-times text-red-500"></i>':s; }
 
-        // --- NEW FORCE RETRY FUNCTION (FIXED & MANUAL) ---
+        // --- NEW FORCE RETRY FUNCTION (DEEP REPAIR) ---
         window.forceRetryPending = async function() {
-            if(!confirm("¿Estás seguro de reiniciar las preguntas incompletas?")) return;
-
-            const zombies = state.questions.filter(q => q.status === 'done' && (!q.answer || q.answer.trim().length < 5));
-            const stuck = state.questions.filter(q => q.status === 'pending' || q.status === 'processing' || q.status === 'retry');
-
-            let count = 0;
+            // 1. Identificar cualquier cosa que no esté 100% bien (Status no DONE o Texto corto)
+            const problemQ = state.questions.filter(q => {
+                const isDone = q.status === 'done';
+                const hasText = q.answer && q.answer.trim().length > 15;
+                return !isDone || !hasText; 
+            });
             
-            // Reset Zombies
-            for(const q of zombies) {
+            if(problemQ.length === 0) return alert("El sistema ve todas las preguntas completas y válidas. Si ves alguna vacía, usa el botón de 'Reintentar' individual en la tarjeta.");
+
+            if(!confirm(`Se detectaron ${problemQ.length} preguntas incompletas o vacías. ¿Reprocesarlas?`)) return;
+
+            // 2. Resetear estados en DB y Memoria
+            for(const q of problemQ) {
                 q.status = 'retry';
+                q.answer = ''; // Limpiar basura
                 q.attempts = 0;
-                await window.saveQ(q);
-                // Visual update immediately to show it's queued
+                await window.saveQ(q); // Guardar en disco
+                
+                // Actualizar UI visualmente ya
                 const card = getEl(`card-${q.id}`);
                 if(card) {
-                    card.querySelector('.status-ind').innerHTML = '<span class="text-orange-500 font-bold"><i class="fas fa-history"></i> En cola (Forzado)</span>';
+                    card.querySelector('.status-ind').innerHTML = '<span class="text-orange-500 font-bold"><i class="fas fa-history"></i> En cola</span>';
                     card.querySelector('.ans-body').innerHTML = '<span class="italic text-slate-400">Esperando reintento...</span>';
                 }
-                count++;
             }
-
-            // Immediately update global counter to reflect pending status
-            updateCounterUI();
             
-            if(count > 0 || stuck.length > 0) {
-                alert(`Se encontraron ${count} respuestas vacías y ${stuck.length} pendientes. Reiniciando cola...`);
-                getEl('recoveryAlert').classList.add('hidden'); // Hide alert if it was showing
-                startQueueProcessing();
-            } else {
-                alert("No se detectaron preguntas incompletas o vacías.");
-            }
+            updateCounterUI(); // Actualizar contador global
+            startQueueProcessing(); // Arrancar motor
         };
     </script>
 </body>
