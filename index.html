@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v10.7 (Deep Repair)</title>
+    <title>INTIZA CISO AI OFFICER v10.8 (Live Context)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -85,7 +85,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-white opacity-90">MODO CORPORATIVO</div>
-                    <div class="text-green-300 text-[10px] font-mono">v10.7 Deep Repair</div>
+                    <div class="text-green-300 text-[10px] font-mono">v10.8 Live Context</div>
                 </div>
             </div>
         </div>
@@ -316,13 +316,24 @@
 
         <!-- STEP 3: Results (NEW HEADER FOR RESUME & TIMER) -->
         <div id="step3" class="hidden step-content bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <!-- RECOVERY ALERT (Always there if issues exist) -->
+            <!-- INSTRUCCIONES ADICIONALES (NEW) -->
+            <div class="mb-4">
+                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                    <i class="fas fa-comment-dots text-intiza-blue"></i> Instrucciones de Vuelo (Contexto Adicional)
+                </label>
+                <textarea id="extraInstructions" onchange="localStorage.setItem('ciso_extra_context', this.value)"
+                    class="w-full text-xs p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-intiza-blue outline-none bg-slate-50" 
+                    rows="2" 
+                    placeholder="Escribe aquí instrucciones extra para la IA... (Ej: 'Responde asumiendo que el cliente es un banco', 'Sé breve', 'Menciona ISO 27001'). Se aplicará a las siguientes preguntas."></textarea>
+            </div>
+
+            <!-- RECOVERY ALERT -->
             <div id="recoveryAlert" class="hidden mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg flex justify-between items-center shadow-sm">
                 <div class="flex items-center gap-3">
                     <div class="bg-amber-100 p-2 rounded-full text-amber-600"><i class="fas fa-exclamation-triangle"></i></div>
                     <div>
-                        <h4 class="font-bold text-amber-800 text-sm">Problemas Detectados</h4>
-                        <p class="text-xs text-amber-700" id="recoveryMsg">Preguntas vacías.</p>
+                        <h4 class="font-bold text-amber-800 text-sm">Sesión Interrumpida Detectada</h4>
+                        <p class="text-xs text-amber-700" id="recoveryMsg">Se encontraron preguntas pendientes.</p>
                     </div>
                 </div>
             </div>
@@ -548,6 +559,10 @@
                 }
             }
             
+            // Load extra instructions
+            const savedExtra = localStorage.getItem('ciso_extra_context');
+            if(savedExtra) getEl('extraInstructions').value = savedExtra;
+
             await refreshDocsUI();
             
             const vCount = await window.countVectors();
@@ -560,8 +575,16 @@
                 state.questions = qs.sort((a,b) => a.id.localeCompare(b.id, undefined, {numeric: true}));
                 updateQuestionsUI(); renderResultsUI(); enableStep(3);
                 
-                // AUTO-RECOVERY LOGIC - ALWAYS SHOW REPAIR BTN IF NOT 100% DONE
-                updateCounterUI(); 
+                // AUTO-RECOVERY LOGIC
+                const pending = state.questions.filter(q => q.status === 'pending' || q.status === 'retry');
+                
+                if(pending.length > 0) {
+                    getEl('btnResume').classList.remove('hidden');
+                    getEl('recoveryAlert').classList.remove('hidden');
+                    getEl('recoveryMsg').textContent = `Se detectaron ${pending.length} preguntas pendientes de una sesión anterior.`;
+                }
+                
+                updateCounterUI();
                 updateSourcesIndex();
             }
             
@@ -983,12 +1006,15 @@
                     const tokenEst = Math.ceil(contextText.length / 4) + 200; 
                     if(card) card.querySelector('.status-ind').innerHTML=`<span class="text-xs text-gray-500 mr-2"><i class="fas fa-coins"></i> ${tokenEst} tokens</span> <i class="fas fa-pen-nib text-intiza-blue"></i> Redactando...`;
 
+                    const extraContext = getEl('extraInstructions').value.trim();
+
                     // UPDATED CISO PERSONA PROMPT
                     const prompt = `
                         ROL: Actúas como el CISO de INTIZA. Estás respondiendo un cuestionario de auditoría para un Cliente Corporativo.
                         TONO: Usa primera persona del plural ("Nosotros", "Nuestra plataforma"). Sé profesional, tranquilizador y orientado a la venta/confianza.
                         INSTRUCCIÓN: Si un documento dice "El proveedor debe...", tú responde "Cumplimos con...", asumiendo que Intiza es el proveedor.
-                        
+                        ${extraContext ? `INSTRUCCIONES ADICIONALES DE CONTEXTO (PRIORIDAD ALTA): "${extraContext}"` : ''}
+
                         CONTEXTO (Fragmentos recuperados de la biblioteca normativa interna):
                         """${contextText}"""
                         
@@ -1162,7 +1188,6 @@
         window.sendEmail = function() { window.location.href=`mailto:?subject=Reporte&body=${encodeURIComponent(getEl('resultsContainer').innerText.substring(0,1800))}`; };
         
         window.reproc = async function(id) {
-            // Manual Reproc Logic - works for both Retry Button and Flag Button
             const fbElem = getEl(`tx-${id}`);
             const fb = fbElem ? fbElem.value : ""; 
             
@@ -1215,36 +1240,39 @@
         function toggleFb(id) { getEl(`fb-${id}`).classList.toggle('hidden'); }
         function getIcon(s) { return s==='done'?'<i class="fas fa-check text-intiza-blue"></i>':s==='error'?'<i class="fas fa-times text-red-500"></i>':s; }
 
-        // --- NEW FORCE RETRY FUNCTION (DEEP REPAIR) ---
+        // --- NEW FORCE RETRY FUNCTION (FIXED & MANUAL) ---
         window.forceRetryPending = async function() {
-            // 1. Identificar cualquier cosa que no esté 100% bien (Status no DONE o Texto corto)
-            const problemQ = state.questions.filter(q => {
-                const isDone = q.status === 'done';
-                const hasText = q.answer && q.answer.trim().length > 15;
-                return !isDone || !hasText; 
-            });
+            if(!confirm("¿Estás seguro de reiniciar las preguntas incompletas?")) return;
+
+            const zombies = state.questions.filter(q => q.status === 'done' && (!q.answer || q.answer.trim().length < 5));
+            const stuck = state.questions.filter(q => q.status === 'pending' || q.status === 'processing' || q.status === 'retry');
+
+            let count = 0;
             
-            if(problemQ.length === 0) return alert("El sistema ve todas las preguntas completas y válidas. Si ves alguna vacía, usa el botón de 'Reintentar' individual en la tarjeta.");
-
-            if(!confirm(`Se detectaron ${problemQ.length} preguntas incompletas o vacías. ¿Reprocesarlas?`)) return;
-
-            // 2. Resetear estados en DB y Memoria
-            for(const q of problemQ) {
+            // Reset Zombies
+            for(const q of zombies) {
                 q.status = 'retry';
-                q.answer = ''; // Limpiar basura
                 q.attempts = 0;
-                await window.saveQ(q); // Guardar en disco
-                
-                // Actualizar UI visualmente ya
+                await window.saveQ(q);
+                // Visual update immediately to show it's queued
                 const card = getEl(`card-${q.id}`);
                 if(card) {
-                    card.querySelector('.status-ind').innerHTML = '<span class="text-orange-500 font-bold"><i class="fas fa-history"></i> En cola</span>';
+                    card.querySelector('.status-ind').innerHTML = '<span class="text-orange-500 font-bold"><i class="fas fa-history"></i> En cola (Forzado)</span>';
                     card.querySelector('.ans-body').innerHTML = '<span class="italic text-slate-400">Esperando reintento...</span>';
                 }
+                count++;
             }
+
+            // Immediately update global counter to reflect pending status
+            updateCounterUI();
             
-            updateCounterUI(); // Actualizar contador global
-            startQueueProcessing(); // Arrancar motor
+            if(count > 0 || stuck.length > 0) {
+                alert(`Se encontraron ${count} respuestas vacías y ${stuck.length} pendientes. Reiniciando cola...`);
+                getEl('recoveryAlert').classList.add('hidden'); // Hide alert if it was showing
+                startQueueProcessing();
+            } else {
+                alert("No se detectaron preguntas incompletas o vacías.");
+            }
         };
     </script>
 </body>
