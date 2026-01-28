@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v10.8 (Tier 1 Optimized)</title>
+    <title>INTIZA CISO AI OFFICER v10.8 (Tier 1 Fixed)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -85,7 +85,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-white opacity-90">MODO CORPORATIVO (TIER 1)</div>
-                    <div class="text-green-300 text-[10px] font-mono">v10.8 Optimized</div>
+                    <div class="text-green-300 text-[10px] font-mono">v10.8 Fixed</div>
                 </div>
             </div>
         </div>
@@ -623,23 +623,34 @@
 
         async function getEmbedding(text) {
             if(!text || !text.trim()) return null;
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${state.apiKey}`;
-            try {
-                const r = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        model: "models/text-embedding-004",
-                        content: { parts: [{ text: text }] }
-                    })
-                });
-                if (!r.ok) throw new Error("Embed API Error");
-                const data = await r.json();
-                return data.embedding.values;
-            } catch(e) {
-                console.error("Embedding fail:", e);
-                return null;
+            
+            // Intenta primero con el modelo nuevo, si falla (404), usa el legacy (001)
+            const candidates = ["text-embedding-004", "embedding-001"];
+            
+            for (const modelName of candidates) {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:embedContent?key=${state.apiKey}`;
+                try {
+                    const r = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            model: `models/${modelName}`,
+                            content: { parts: [{ text: text }] }
+                        })
+                    });
+                    
+                    if (r.ok) {
+                        const data = await r.json();
+                        return data.embedding.values;
+                    } else {
+                        // Si da error (ej 404), loguear y probar siguiente
+                        console.warn(`Modelo ${modelName} falló con ${r.status}. Intentando fallback...`);
+                    }
+                } catch(e) {
+                    console.error("Error en embedding:", e);
+                }
             }
+            return null; // Si ambos fallan
         }
 
         function cosineSimilarity(vecA, vecB) {
