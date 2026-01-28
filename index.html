@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v10.8 (Tier 1 Fixed)</title>
+    <title>INTIZA CISO AI OFFICER v10.8 (Tier 1 + Embed Fix)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -85,7 +85,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-white opacity-90">MODO CORPORATIVO (TIER 1)</div>
-                    <div class="text-green-300 text-[10px] font-mono">v10.8 Fixed</div>
+                    <div class="text-green-300 text-[10px] font-mono">v10.8 Embed Fix</div>
                 </div>
             </div>
         </div>
@@ -165,6 +165,7 @@
                         <option value="gemini-2.5-flash">🧪 Gemini 2.5 Flash</option>
                         <option value="gemini-2.0-flash">🚀 Gemini 2.0 Flash</option>
                         <option value="gemini-1.5-flash">📦 Gemini 1.5 Flash</option>
+                        <option value="gemini-1.5-pro">🧠 Gemini 1.5 Pro</option>
                     </select>
                 </div>
 
@@ -404,7 +405,7 @@
 
     <script>
         // --- UTILS & CONFIG ---
-        const RPM_LIMIT = 100; // Increased to reflect Tier 1 visually
+        const RPM_LIMIT = 100; // Tier 1
         const TPM_LIMIT = 2000000;
         const WINDOW_MS = 60000; 
         const CHUNK_SIZE = 1000; 
@@ -621,36 +622,40 @@
             return chunks;
         }
 
+        // --- NUEVA FUNCIÓN DE EMBEDDING CON FALLBACK ---
         async function getEmbedding(text) {
-            if(!text || !text.trim()) return null;
-            
-            // Intenta primero con el modelo nuevo, si falla (404), usa el legacy (001)
-            const candidates = ["text-embedding-004", "embedding-001"];
-            
-            for (const modelName of candidates) {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:embedContent?key=${state.apiKey}`;
+            if (!text || !text.trim()) return null;
+
+            // Estrategia de Fallback en Cascada: Modelos + Versiones API
+            const strategies = [
+                { model: "text-embedding-004", version: "v1beta" },
+                { model: "embedding-001", version: "v1beta" },
+                { model: "embedding-001", version: "v1" }
+            ];
+
+            for (const strat of strategies) {
+                const url = `https://generativelanguage.googleapis.com/${strat.version}/models/${strat.model}:embedContent?key=${state.apiKey}`;
                 try {
                     const r = await fetch(url, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            model: `models/${modelName}`,
+                            model: `models/${strat.model}`,
                             content: { parts: [{ text: text }] }
                         })
                     });
-                    
+
                     if (r.ok) {
                         const data = await r.json();
                         return data.embedding.values;
                     } else {
-                        // Si da error (ej 404), loguear y probar siguiente
-                        console.warn(`Modelo ${modelName} falló con ${r.status}. Intentando fallback...`);
+                        console.warn(`[Indexado] Falló ${strat.model} (${strat.version}): ${r.status}`);
                     }
-                } catch(e) {
-                    console.error("Error en embedding:", e);
+                } catch (e) {
+                    console.error(`[Indexado] Error red con ${strat.model}:`, e);
                 }
             }
-            return null; // Si ambos fallan
+            return null; // Fallo total
         }
 
         function cosineSimilarity(vecA, vecB) {
@@ -725,7 +730,7 @@
                     bar.style.width = `${pct}%`;
                     prog.textContent = `${pct}%`;
                     
-                    if(i % 10 === 0) await sleep(200); 
+                    if(i % 10 === 0) await sleep(500); // More relaxed pacing for embedding
                 } catch(e) {
                     log(`Error vectorizando chunk ${i}: ${e.message}`, 'error');
                     await sleep(2000); 
