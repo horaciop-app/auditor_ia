@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v10.8 (Hybrid Engine)</title>
+    <title>INTIZA CISO AI OFFICER v10.8 (Stable Core)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -30,21 +30,19 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
-    <!-- MOTOR NEURONAL LOCAL (Para evitar errores 404 de Google Embeddings) -->
+    <!-- MOTOR NEURONAL LOCAL -->
     <script type="module">
         import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.16.0';
         
         window.localExtractor = null;
         
-        // Función expuesta globalmente para iniciar el motor local
         window.initLocalBrain = async (progressCallback) => {
             if (!window.localExtractor) {
                 console.log("Iniciando descarga de modelo local Xenova/all-MiniLM-L6-v2...");
-                // Usamos un modelo cuantizado y pequeño ideal para navegador
                 window.localExtractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', {
                     progress_callback: (data) => {
                         if(data.status === 'progress' && progressCallback) {
-                            progressCallback(data.progress); // Porcentaje de carga del modelo
+                            progressCallback(data.progress);
                         }
                     }
                 });
@@ -52,12 +50,9 @@
             }
         };
 
-        // Función expuesta para obtener vector localmente
         window.getLocalVector = async (text) => {
             if(!window.localExtractor) await window.initLocalBrain();
-            // Mean pooling y normalización para obtener un vector comparable
             const output = await window.localExtractor(text, { pooling: 'mean', normalize: true });
-            // Convertir Tensor a Array normal de JS
             return Array.from(output.data);
         };
     </script>
@@ -116,8 +111,8 @@
             
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
-                    <div class="font-bold text-white opacity-90">MODO HÍBRIDO (LOCAL + CLOUD)</div>
-                    <div class="text-green-300 text-[10px] font-mono">v10.8 Hybrid</div>
+                    <div class="font-bold text-white opacity-90">MODO CORPORATIVO</div>
+                    <div class="text-green-300 text-[10px] font-mono">v10.8 Stable Core</div>
                 </div>
             </div>
         </div>
@@ -337,7 +332,7 @@
                 </h3>
                 <div id="questionsList" class="bg-slate-50 p-4 rounded border border-slate-200 max-h-60 overflow-y-auto space-y-2 text-sm scrollbar-thin"></div>
                 
-                <!-- INSTRUCCIONES ADICIONALES (MOVED TO STEP 2) -->
+                <!-- INSTRUCCIONES ADICIONALES -->
                 <div class="mt-4 pt-4 border-t border-slate-100">
                     <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                         <i class="fas fa-comment-dots text-intiza-blue"></i> Instrucciones de Vuelo (Contexto Adicional)
@@ -357,7 +352,7 @@
             </div>
         </div>
 
-        <!-- STEP 3: Results (NEW HEADER FOR RESUME & TIMER) -->
+        <!-- STEP 3: Results -->
         <div id="step3" class="hidden step-content bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <!-- RECOVERY ALERT -->
             <div id="recoveryAlert" class="hidden mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg flex justify-between items-center shadow-sm">
@@ -374,7 +369,7 @@
                 <div class="flex items-center gap-4">
                     <div>
                         <h2 class="text-lg font-semibold text-slate-800">3. Informe CISO</h2>
-                        <div class="text-xs text-slate-500" id="progressStats">Listo</div>
+                        <div class="text-xs text-slate-500 font-bold" id="progressStats">Listo</div>
                     </div>
                     <!-- CLOCK & ETA -->
                     <div id="timeStats" class="hidden text-xs font-mono text-slate-500 bg-white border px-2 py-1 rounded">
@@ -391,7 +386,6 @@
                     </div>
 
                     <div class="flex gap-2">
-                         <!-- BOTÓN DE RESCATE SIEMPRE VISIBLE PARA CONTROL TOTAL -->
                          <button id="btnForceRetry" onclick="forceRetryPending()" class="text-xs bg-orange-100 text-orange-700 border border-orange-200 px-3 py-1 rounded font-bold hover:bg-orange-200 shadow-sm transition-all" title="Buscar preguntas vacías y reintentar">
                             <i class="fas fa-ambulance"></i> REPARAR
                          </button>
@@ -424,19 +418,13 @@
         </div>
     </main>
 
-    <!-- FOOTER -->
     <footer class="bg-slate-100 p-6 text-center border-t border-slate-200 mt-8">
-        <p class="text-slate-700 font-semibold text-sm mb-1">
-            Gracias por utilizar nuestro sistema de respuestas SGSI, recuerde que siempre debe validarlas con un analista de Seguridad.
-        </p>
-        <p class="text-slate-500 text-xs">
-            Las mismas se basan en nuestro Marco Normativo y Certificación ISO 27001:2022
-        </p>
+        <p class="text-slate-700 font-semibold text-sm mb-1">Gracias por utilizar nuestro sistema de respuestas SGSI.</p>
+        <p class="text-slate-500 text-xs">Validar respuestas con un analista. Basado en ISO 27001:2022</p>
     </footer>
 
     <script>
-        // --- UTILS & CONFIG ---
-        const RPM_LIMIT = 100; // Tier 1
+        const RPM_LIMIT = 100;
         const TPM_LIMIT = 2000000;
         const WINDOW_MS = 60000; 
         const CHUNK_SIZE = 1000; 
@@ -447,29 +435,22 @@
             "gemini-2.0-flash",       
             "gemini-1.5-flash",
             "gemini-1.5-flash-001",
-            "gemini-1.5-flash-002",
-            "gemini-1.5-pro"          
+            "gemini-1.5-flash-002"
         ];
 
         function log(msg, type='info') {
             const box = document.getElementById('syncLog');
             if(!box) return;
-            const d = document.createElement('div');
-            d.textContent = `> ${msg}`;
-            if(type==='error') d.style.color = '#ef4444';
-            else if(type==='success') d.style.color = '#10b981';
-            box.appendChild(d);
-            box.scrollTop = box.scrollHeight;
-            console.log(`[${type.toUpperCase()}] ${msg}`);
+            const d = document.createElement('div'); d.textContent = `> ${msg}`;
+            if(type==='error') d.style.color = '#ef4444'; else if(type==='success') d.style.color = '#10b981';
+            box.appendChild(d); box.scrollTop = box.scrollHeight;
         }
         function getEl(id) { return document.getElementById(id); }
         const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-        // --- DATABASE V4 (RAG) ---
+        // DATABASE
         const DB_NAME = 'AuditorDB_v4_RAG'; 
-        const STORE_DOCS = 'documents'; 
-        const STORE_QUESTIONS = 'questions'; 
-        const STORE_VECTORS = 'vectors'; 
+        const STORE_DOCS = 'documents'; const STORE_QUESTIONS = 'questions'; const STORE_VECTORS = 'vectors'; 
         
         const dbPromise = new Promise((res, rej) => {
             const req = indexedDB.open(DB_NAME, 1);
@@ -479,8 +460,7 @@
                 if (!db.objectStoreNames.contains(STORE_QUESTIONS)) db.createObjectStore(STORE_QUESTIONS, { keyPath: 'id' });
                 if (!db.objectStoreNames.contains(STORE_VECTORS)) db.createObjectStore(STORE_VECTORS, { keyPath: 'id', autoIncrement: true });
             };
-            req.onsuccess = (e) => res(e.target.result);
-            req.onerror = (e) => rej(e.target.error);
+            req.onsuccess = (e) => res(e.target.result); req.onerror = (e) => rej(e.target.error);
         });
 
         async function dbOp(mode, store, cb) {
@@ -488,13 +468,11 @@
             return new Promise((res, rej) => {
                 const tx = db.transaction(store, mode);
                 const req = cb(tx.objectStore(store));
-                tx.oncomplete = () => res(req?.result);
-                tx.onerror = () => rej(tx.error);
+                tx.oncomplete = () => res(req?.result); tx.onerror = () => rej(tx.error);
                 if (req && req.onsuccess === null) req.onsuccess = ()=>{};
             });
         }
 
-        // Global DB Functions
         window.saveDoc = async function(name, content, source='local') { await dbOp('readwrite', STORE_DOCS, s => s.put({name, content, source})); };
         window.loadDocs = async function() { return new Promise(async res => { (await dbPromise).transaction(STORE_DOCS).objectStore(STORE_DOCS).getAll().onsuccess = e => res(e.target.result); }); };
         window.saveQ = async function(q) { await dbOp('readwrite', STORE_QUESTIONS, s => s.put(q)); };
@@ -502,47 +480,31 @@
         window.saveVector = async function(v) { await dbOp('readwrite', STORE_VECTORS, s => s.put(v)); };
         window.loadVectors = async function() { return new Promise(async res => { (await dbPromise).transaction(STORE_VECTORS).objectStore(STORE_VECTORS).getAll().onsuccess = e => res(e.target.result); }); };
         window.countVectors = async function() { return new Promise(async res => { (await dbPromise).transaction(STORE_VECTORS).objectStore(STORE_VECTORS).count().onsuccess = e => res(e.target.result); }); };
-        
         window.clearDB = async function(target) { 
-            if(confirm("¿Borrar datos? Esto eliminará documentos y el índice vectorial.")) { 
+            if(confirm("¿Borrar datos?")) { 
                 const db = await dbPromise;
                 const tx = db.transaction([STORE_DOCS, STORE_QUESTIONS, STORE_VECTORS], 'readwrite');
-                if(target === 'all' || target === 'documents') {
-                    tx.objectStore(STORE_DOCS).clear();
-                    tx.objectStore(STORE_VECTORS).clear();
-                }
-                if(target === 'all' || target === 'questions') {
-                    tx.objectStore(STORE_QUESTIONS).clear();
-                }
+                if(target === 'all' || target === 'documents') { tx.objectStore(STORE_DOCS).clear(); tx.objectStore(STORE_VECTORS).clear(); }
+                if(target === 'all' || target === 'questions') { tx.objectStore(STORE_QUESTIONS).clear(); }
                 window.location.reload(); 
             } 
         };
 
-        // --- STATE ---
+        // STATE
         let state = { 
             apiKey: localStorage.getItem('ciso_key')||'', 
-            sourceText:'', 
-            questions:[], 
-            abort:null, 
-            processing:false, 
-            requestLog: [],
+            questions:[], abort:null, processing:false, requestLog: [],
             model: localStorage.getItem('ciso_active_model') || '',
-            vectors: [],
-            // TIME TRACKING
-            startTime: 0,
-            processedCount: 0,
-            timerInterval: null
+            vectors: [], startTime: 0, processedCount: 0, timerInterval: null
         };
 
-        // --- AUTH & SETUP ---
+        // AUTH & SETUP
         window.startAutoDetection = async function() {
             const key = getEl('apiKeyInput').value.trim();
-            if(!key) return alert("Por favor ingresa tu API Key primero.");
-            state.apiKey = key;
-            localStorage.setItem('ciso_key', key);
+            if(!key) return alert("Por favor ingresa tu API Key.");
+            state.apiKey = key; localStorage.setItem('ciso_key', key);
             getEl('connectionStatus').classList.remove('hidden');
             let foundModel = null;
-            
             const manualSel = getEl('modelSelector').value;
             const candidates = manualSel !== 'auto' ? [manualSel] : MODEL_CANDIDATES;
 
@@ -552,8 +514,7 @@
                 if (await testModelConnection(key, model)) { foundModel = model; break; }
             }
             if (foundModel) {
-                state.model = foundModel;
-                localStorage.setItem('ciso_active_model', foundModel);
+                state.model = foundModel; localStorage.setItem('ciso_active_model', foundModel);
                 getEl('detectMsg').innerHTML = `<span class="text-green-600 font-bold">¡Conectado!</span>`;
                 getEl('activeModelBadge').classList.remove('hidden');
                 getEl('modelNameDisplay').textContent = foundModel;
@@ -565,9 +526,7 @@
 
         window.manualModelChange = function() {
             const sel = getEl('modelSelector').value;
-            if(sel !== 'auto' && state.apiKey) {
-                if(confirm("¿Cambiar modelo manualmente?")) startAutoDetection();
-            }
+            if(sel !== 'auto' && state.apiKey) { if(confirm("¿Cambiar modelo manualmente?")) startAutoDetection(); }
         }
 
         async function testModelConnection(key, modelName) {
@@ -578,7 +537,7 @@
             } catch (e) { return false; }
         }
 
-        // --- INIT & PERSISTENCE CHECK ---
+        // INIT
         window.onload = async function() {
             if(state.apiKey) {
                 getEl('apiKeyInput').value = state.apiKey;
@@ -590,7 +549,6 @@
                 }
             }
             
-            // Load extra instructions
             const savedExtra = localStorage.getItem('ciso_extra_context');
             if(savedExtra) getEl('extraInstructions').value = savedExtra;
 
@@ -603,29 +561,23 @@
             
             const qs = await window.loadQs();
             if(qs.length > 0) {
-                state.questions = qs.sort((a,b) => a.id.localeCompare(b.id, undefined, {numeric: true}));
+                state.questions = qs.sort((a,b) => parseInt(a.id) - parseInt(b.id)); // Num sort
                 updateQuestionsUI(); renderResultsUI(); enableStep(3);
                 
-                // AUTO-RECOVERY LOGIC
                 const pending = state.questions.filter(q => q.status === 'pending' || q.status === 'retry');
-                
                 if(pending.length > 0) {
                     getEl('btnResume').classList.remove('hidden');
                     getEl('recoveryAlert').classList.remove('hidden');
                     getEl('recoveryMsg').textContent = `Se detectaron ${pending.length} preguntas pendientes de una sesión anterior.`;
                 }
-                
-                updateCounterUI();
-                updateSourcesIndex();
+                updateCounterUI(); updateSourcesIndex();
             }
-            
             setInterval(updateMonitorUI, 1000);
         };
 
         window.resetApiKey = function() {
             if(confirm("¿Cambiar API Key?")) {
-                localStorage.removeItem('ciso_key');
-                localStorage.removeItem('ciso_active_model');
+                localStorage.removeItem('ciso_key'); localStorage.removeItem('ciso_active_model');
                 state.apiKey = ''; state.model = ''; getEl('apiKeyInput').value = '';
                 getEl('activeModelBadge').classList.add('hidden');
             }
@@ -635,13 +587,8 @@
         function updateMonitorUI() {
             const now = Date.now();
             state.requestLog = state.requestLog.filter(req => (now - req.time) < WINDOW_MS);
-            const rpm = state.requestLog.length;
-            const tpm = state.requestLog.reduce((acc, req) => acc + req.tokens, 0);
-            
-            getEl('rpmVal').textContent = rpm;
-            getEl('rpmBar').style.width = `${Math.min((rpm/RPM_LIMIT)*100, 100)}%`;
-            
-            // Monitor Local Brain
+            getEl('rpmVal').textContent = state.requestLog.length;
+            getEl('rpmBar').style.width = `${Math.min((state.requestLog.length/RPM_LIMIT)*100, 100)}%`;
             if(window.localExtractor) {
                 getEl('localEngineStatus').textContent = "Activo";
                 getEl('localEngineStatus').className = "text-green-600 font-bold";
@@ -649,230 +596,112 @@
             }
         }
 
-        // --- VECTOR UTILS ---
+        // VECTOR UTILS
         function chunkText(text, size, overlap) {
             const chunks = [];
-            for (let i = 0; i < text.length; i += (size - overlap)) {
-                chunks.push(text.substring(i, i + size));
-            }
+            for (let i = 0; i < text.length; i += (size - overlap)) chunks.push(text.substring(i, i + size));
             return chunks;
         }
 
-        // --- NUEVA FUNCIÓN DE EMBEDDING HÍBRIDA ---
-        // Intenta API -> Si falla -> Usa Local Brain
         async function getEmbedding(text) {
             if (!text || !text.trim()) return null;
-
-            // Opción 1: Intenta API si está disponible (Opcional, pero vamos a ir directo a local si falló antes)
-            // Dado que el usuario reporta falla total, priorizamos local si ya cargó, o intentamos cargar local.
-            
             try {
-                // Forzamos el uso del motor local porque la API está rota para este usuario
-                if(window.getLocalVector) {
-                    return await window.getLocalVector(text);
-                }
-            } catch(e) {
-                console.error("Fallo motor local, intentando API como último recurso...", e);
-            }
+                if(window.getLocalVector) return await window.getLocalVector(text);
+            } catch(e) { console.error("Fallo motor local, intentando API...", e); }
 
-            // Fallback a API (solo si local falla)
             const url = `https://generativelanguage.googleapis.com/v1beta/models/embedding-001:embedContent?key=${state.apiKey}`;
             try {
-                const r = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        model: "models/embedding-001",
-                        content: { parts: [{ text: text }] }
-                    })
-                });
-                if (r.ok) {
-                    const data = await r.json();
-                    return data.embedding.values;
-                }
-            } catch(e) { console.error("API Embedding también falló"); }
-            
+                const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: "models/embedding-001", content: { parts: [{ text: text }] } }) });
+                if (r.ok) return (await r.json()).embedding.values;
+            } catch(e) {}
             return null;
         }
 
         function cosineSimilarity(vecA, vecB) {
-            let dotProduct = 0;
-            let normA = 0;
-            let normB = 0;
-            for (let i = 0; i < vecA.length; i++) {
-                dotProduct += vecA[i] * vecB[i];
-                normA += vecA[i] * vecA[i];
-                normB += vecB[i] * vecB[i];
-            }
+            let dotProduct = 0, normA = 0, normB = 0;
+            for (let i = 0; i < vecA.length; i++) { dotProduct += vecA[i] * vecB[i]; normA += vecA[i] * vecA[i]; normB += vecB[i] * vecB[i]; }
             return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
         }
 
-        async function findRelevantChunks(queryEmbedding, limit = 8) { // TOP 8 for Diversity
-            if (state.vectors.length === 0) {
-                state.vectors = await window.loadVectors();
-            }
+        async function findRelevantChunks(queryEmbedding, limit = 8) {
+            if (state.vectors.length === 0) state.vectors = await window.loadVectors();
             if (state.vectors.length === 0) return [];
-
-            const scored = state.vectors.map(v => ({
-                ...v,
-                score: cosineSimilarity(queryEmbedding, v.vector)
-            }));
-
-            scored.sort((a, b) => b.score - a.score);
-            return scored.slice(0, limit);
+            const scored = state.vectors.map(v => ({ ...v, score: cosineSimilarity(queryEmbedding, v.vector) }));
+            return scored.sort((a, b) => b.score - a.score).slice(0, limit);
         }
 
         async function runIndexingProcess(docs) {
-            const area = getEl('vectorizationArea');
-            const bar = getEl('vecBar');
-            const prog = getEl('vecProgress');
+            const area = getEl('vectorizationArea'); const bar = getEl('vecBar'); const prog = getEl('vecProgress');
             area.classList.remove('hidden');
             
-            // Inicializar cerebro local antes de empezar
-            log("Cargando modelo neuronal local en el navegador...", 'info');
             await window.initLocalBrain((progress) => {
                 const pct = Math.round(progress);
-                if(pct < 100) {
-                    prog.textContent = `Cargando IA: ${pct}%`;
-                    bar.style.width = `${pct}%`;
-                }
+                if(pct < 100) { prog.textContent = `Cargando IA: ${pct}%`; bar.style.width = `${pct}%`; }
             });
             
-            let totalChunks = 0;
-            let processedChunks = 0;
-            
-            log("Iniciando fragmentación de documentos...", 'info');
             let allChunks = [];
             for(const doc of docs) {
-                const chunks = chunkText(doc.content, CHUNK_SIZE, CHUNK_OVERLAP);
-                chunks.forEach((txt, idx) => {
-                    allChunks.push({
-                        docName: doc.name,
-                        text: txt,
-                        chunkId: `${doc.name}_${idx}`
-                    });
+                chunkText(doc.content, CHUNK_SIZE, CHUNK_OVERLAP).forEach((txt, idx) => {
+                    allChunks.push({ docName: doc.name, text: txt, chunkId: `${doc.name}_${idx}` });
                 });
             }
-            totalChunks = allChunks.length;
-            log(`${totalChunks} fragmentos generados. Iniciando vectorización local...`, 'info');
-
-            const db = await dbPromise;
-            const tx = db.transaction(STORE_VECTORS, 'readwrite');
-            tx.objectStore(STORE_VECTORS).clear(); 
             
+            const db = await dbPromise; const tx = db.transaction(STORE_VECTORS, 'readwrite'); tx.objectStore(STORE_VECTORS).clear(); 
+            
+            let processedChunks = 0;
             for(let i=0; i<allChunks.length; i++) {
                 const chunk = allChunks[i];
                 try {
                     const vec = await getEmbedding(chunk.text);
-                    if(vec) {
-                        await window.saveVector({
-                            id: chunk.chunkId,
-                            docName: chunk.docName,
-                            text: chunk.text,
-                            vector: vec
-                        });
-                    }
+                    if(vec) { await window.saveVector({ id: chunk.chunkId, docName: chunk.docName, text: chunk.text, vector: vec }); }
                     processedChunks++;
-                    const pct = Math.round((processedChunks / totalChunks) * 100);
-                    bar.style.width = `${pct}%`;
-                    prog.textContent = `${pct}%`;
-                    
-                    // Local es rápido pero no bloqueemos la UI
-                    if(i % 5 === 0) await sleep(10); 
-                } catch(e) {
-                    log(`Error vectorizando chunk ${i}: ${e.message}`, 'error');
-                }
+                    const pct = Math.round((processedChunks / allChunks.length) * 100);
+                    bar.style.width = `${pct}%`; prog.textContent = `${pct}%`;
+                    if(i % 5 === 0) await sleep(10); // Breathe
+                } catch(e) { log(`Error vec ${i}: ${e.message}`, 'error'); }
             }
             
-            log("Indexado Local Completado.", 'success');
             setTimeout(() => area.classList.add('hidden'), 3000);
-            
-            const vCount = await window.countVectors();
-            getEl('vectorStats').textContent = `${vCount} Chunks`;
-            getEl('vectorStatus').textContent = "Indexado Local";
-            getEl('vectorStatus').className = "text-[9px] text-green-600 font-bold mt-0.5";
+            getEl('vectorStats').textContent = `${await window.countVectors()} Chunks`;
+            getEl('vectorStatus').textContent = "Indexado Local"; getEl('vectorStatus').className = "text-[9px] text-green-600 font-bold mt-0.5";
         }
 
-        // --- SYNC & DOCS ---
         window.debugSync = async function() {
-            const loader = getEl('syncLoader');
-            const area = getEl('syncArea');
-            const logBox = getEl('syncLog');
-            area.classList.remove('hidden');
-            loader.classList.remove('hidden');
-            logBox.innerHTML = ''; 
+            const loader = getEl('syncLoader'); const area = getEl('syncArea'); getEl('syncLog').innerHTML = ''; 
+            area.classList.remove('hidden'); loader.classList.remove('hidden');
 
             try {
-                if(!state.apiKey) throw new Error("Configura tu API Key antes de sincronizar.");
-
-                const manifestRes = await fetch('manifest.json?t=' + new Date().getTime());
-                if(!manifestRes.ok) throw new Error("No se encontró manifest.json");
-                const files = await manifestRes.json();
-
+                if(!state.apiKey) throw new Error("Configura tu API Key primero.");
+                const files = await (await fetch('manifest.json?t=' + new Date().getTime())).json();
                 let newDocs = [];
                 for(const fileName of files) {
-                    log(`Descargando: ${fileName}...`);
                     const fRes = await fetch(`fuentes/${encodeURIComponent(fileName)}`);
                     if(!fRes.ok) continue;
-                    
                     const blob = await fRes.blob();
-                    let text = "";
-                    const lower = fileName.toLowerCase();
-                    if(lower.endsWith('.pdf')) text = await extractTextFromPDF(blob);
-                    else if(lower.endsWith('.docx')) text = await extractTextFromDOCX(blob);
-                    else text = await extractTextFromPDF(blob); 
-                    
-                    await window.saveDoc(fileName, text, 'server');
-                    newDocs.push({name: fileName, content: text});
+                    let text = fileName.toLowerCase().endsWith('.docx') ? await extractTextFromDOCX(blob) : await extractTextFromPDF(blob); 
+                    await window.saveDoc(fileName, text, 'server'); newDocs.push({name: fileName, content: text});
                 }
-                
-                log("Archivos descargados. Iniciando Indexado...", 'info');
-                await runIndexingProcess(newDocs);
-                
-                await refreshDocsUI();
-            } catch(e) {
-                alert("Error Sync: " + e.message);
-                log(e.message, 'error');
-            } finally {
-                loader.classList.add('hidden');
-            }
+                await runIndexingProcess(newDocs); await refreshDocsUI();
+            } catch(e) { alert("Error: " + e.message); } finally { loader.classList.add('hidden'); }
         };
 
         async function refreshDocsUI() {
             const docs = await window.loadDocs();
-            const list = getEl('uploadedFilesList');
-            const badge = getEl('serverStatusBadge');
-            
             if(docs.length > 0) {
                 getEl('storageSize').textContent = docs.length + " Docs";
-                list.innerHTML = '';
-                docs.forEach(d => {
-                    list.innerHTML += `<li class="p-2 text-sm border-b flex justify-between"><span class="text-purple-500 font-bold">${d.name}</span> <span class="text-xs text-gray-400 uppercase">Listo</span></li>`;
-                });
-                getEl('btnToStep2').disabled = false;
-                getEl('btnToStep2').classList.remove('opacity-50', 'cursor-not-allowed');
-                enableStep(2);
-                badge.textContent = "Conectado";
-                badge.className = "text-[10px] bg-purple-100 text-purple-600 px-2 py-1 rounded border font-bold";
+                getEl('uploadedFilesList').innerHTML = docs.map(d => `<li class="p-2 text-sm border-b flex justify-between"><span class="text-purple-500 font-bold">${d.name}</span> <span class="text-xs text-gray-400 uppercase">Listo</span></li>`).join('');
+                getEl('btnToStep2').disabled = false; getEl('btnToStep2').classList.remove('opacity-50', 'cursor-not-allowed');
+                enableStep(2); getEl('serverStatusBadge').textContent = "Conectado"; getEl('serverStatusBadge').className = "text-[10px] bg-purple-100 text-purple-600 px-2 py-1 rounded border font-bold";
             }
         }
 
         async function extractTextFromPDF(blob) {
             const pdf = await pdfjsLib.getDocument({ data: await blob.arrayBuffer() }).promise;
-            let t = ''; for(let i=1;i<=pdf.numPages;i++) t += (await (await pdf.getPage(i)).getTextContent()).items.map(x=>x.str).join(' ');
-            return t;
+            let t = ''; for(let i=1;i<=pdf.numPages;i++) t += (await (await pdf.getPage(i)).getTextContent()).items.map(x=>x.str).join(' '); return t;
         }
         async function extractTextFromDOCX(blob) { return (await mammoth.extractRawText({arrayBuffer: await blob.arrayBuffer()})).value; }
-        async function extractTextFromXLSX(blob) {
-            const wb = XLSX.read(await blob.arrayBuffer());
-            let t = ``; wb.SheetNames.forEach(n => { t+=`\nSheet: ${n}\n`+XLSX.utils.sheet_to_csv(wb.Sheets[n]); });
-            return t;
-        }
 
-        function goToStep2() {
-            if(!state.apiKey) return alert("Configura la IA primero.");
-            showStep(2);
-        }
+        function goToStep2() { if(!state.apiKey) return alert("Configura la IA."); showStep(2); }
         window.showStep = function(n) {
             [1,2,3].forEach(i=>{ getEl(`step${i}`).classList.add('hidden'); getEl(`step${i}-ind`).className=`flex flex-col items-center w-1/3 cursor-pointer ${i===n?'step-active font-bold':'step-inactive'}`; });
             getEl(`step${n}`).classList.remove('hidden');
@@ -880,104 +709,69 @@
         function enableStep(n) { getEl(`step${n}-ind`).classList.remove('step-inactive'); }
 
         window.checkStep2Readiness = function() {
-            const files = getEl('questionFiles').files;
-            const text = getEl('manualQuestionText').value.trim();
-            if(files.length > 0) {
-                getEl('selectedQuestionsFiles').textContent = Array.from(files).map(x=>x.name).join(', ');
-                getEl('selectedQuestionsFiles').classList.remove('hidden');
-            } else getEl('selectedQuestionsFiles').classList.add('hidden');
-            
-            if(files.length > 0 || text.length > 0) getEl('btnAnalyze').classList.remove('hidden');
-            else getEl('btnAnalyze').classList.add('hidden');
+            const files = getEl('questionFiles').files; const text = getEl('manualQuestionText').value.trim();
+            if(files.length > 0) { getEl('selectedQuestionsFiles').textContent = Array.from(files).map(x=>x.name).join(', '); getEl('selectedQuestionsFiles').classList.remove('hidden'); } else getEl('selectedQuestionsFiles').classList.add('hidden');
+            if(files.length > 0 || text.length > 0) getEl('btnAnalyze').classList.remove('hidden'); else getEl('btnAnalyze').classList.add('hidden');
         };
 
         async function extractQuestions() {
-            const files = getEl('questionFiles').files;
-            const manualText = getEl('manualQuestionText').value.trim();
-            const loader = getEl('extractingLoader');
-            const btn = getEl('btnAnalyze');
-            const loaderTextSpan = loader.querySelector('span');
-            
-            loader.classList.remove('hidden');
-            btn.classList.add('hidden');
+            const files = getEl('questionFiles').files; const manualText = getEl('manualQuestionText').value.trim();
+            const loader = getEl('extractingLoader'); const btn = getEl('btnAnalyze');
+            loader.classList.remove('hidden'); btn.classList.add('hidden');
             
             try {
                 let txt = "";
                 for(const f of files) {
                     const ext = f.name.split('.').pop().toLowerCase();
-                    if(ext==='pdf') txt += await extractTextFromPDF(f);
-                    else if(ext==='docx') txt += await extractTextFromDOCX(f);
-                    else if(ext.startsWith('xls')) txt += await extractTextFromXLSX(f);
+                    if(ext==='pdf') txt += await extractTextFromPDF(f); else if(ext==='docx') txt += await extractTextFromDOCX(f);
                 }
-                if(manualText) txt += `\n\n--- PREGUNTAS MANUALES ---\n${manualText}\n\n`;
-                const fullText = txt.trim();
-                if(!fullText) throw new Error("No hay texto.");
+                if(manualText) txt += `\n\n${manualText}\n\n`;
+                if(!txt.trim()) throw new Error("No hay texto.");
 
-                const CHUNK_SIZE = 25000;
-                const chunks = [];
-                for (let i = 0; i < fullText.length; i += CHUNK_SIZE) chunks.push(fullText.substring(i, i + CHUNK_SIZE));
-
-                let allQs = [];
-                let globalIdCounter = 1;
-                const seenTexts = new Set();
+                const chunks = chunkText(txt.trim(), 25000, 0);
+                let allQs = []; const seenTexts = new Set();
 
                 for (let i = 0; i < chunks.length; i++) {
-                    loaderTextSpan.textContent = `Analizando bloque ${i + 1}/${chunks.length}...`;
-                    const prompt = `ACTÚA COMO CISO. Extrae preguntas de CUMPLIMIENTO/AUDITORÍA. JSON: [{"id":"ID","text":"Pregunta"}]. Texto: ${chunks[i]}`;
-                    
+                    loader.querySelector('span').textContent = `Analizando bloque ${i + 1}/${chunks.length}...`;
+                    const prompt = `ACTÚA COMO CISO. Extrae preguntas de CUMPLIMIENTO/AUDITORÍA. JSON: [{"text":"Pregunta"}]. Texto: ${chunks[i]}`;
                     trackRequest(Math.ceil(prompt.length/4));
                     const res = await askGeminiWithRetry(prompt, true, null);
+                    
                     let cleanJson = res.replace(/```json|```/g, '').trim();
                     const first = cleanJson.indexOf('['); if(first !== -1) cleanJson = cleanJson.substring(first);
-                    
-                    let chunkQs = [];
-                    try { chunkQs = JSON.parse(cleanJson); } catch(e) { 
-                        try { chunkQs = JSON.parse(cleanJson + ']'); } catch(e2) { chunkQs = []; }
-                    }
+                    let chunkQs = []; try { chunkQs = JSON.parse(cleanJson); } catch(e) { try { chunkQs = JSON.parse(cleanJson + ']'); } catch(e2) { } }
 
                     if(Array.isArray(chunkQs)) {
                         chunkQs.forEach(q => {
                             const norm = q.text ? q.text.toLowerCase().trim() : "";
                             if(norm.length > 5 && !seenTexts.has(norm)) {
                                 seenTexts.add(norm);
-                                
-                                // ID SANITIZATION & LOGIC
-                                if(!q.id || q.id==='null') {
-                                    q.id = String(globalIdCounter++);
-                                } else {
-                                    // Remove quotes from ID to prevent HTML break
-                                    q.id = String(q.id).replace(/['"]/g, '');
-                                }
-                                
-                                allQs.push(q);
+                                allQs.push({ text: q.text }); // IGNORAR IDS DE GEMINI PARA EVITAR DUPLICADOS
                             }
                         });
                     }
                     await sleep(1000);
                 }
-
                 if(allQs.length === 0) throw new Error("No se extrajeron preguntas.");
                 
-                const finalQs = allQs.map(q=>({...q, status:'pending', attempts:0}));
+                // ASIGNACIÓN DE IDS ÚNICOS Y SECUENCIALES FORZADOS (FIX BUG VISUAL)
+                const finalQs = allQs.map((q, index) => ({
+                    id: String(index + 1),
+                    text: q.text,
+                    status: 'pending',
+                    attempts: 0
+                }));
+
                 await dbOp('readwrite', STORE_QUESTIONS, s => s.clear());
                 for(const q of finalQs) await window.saveQ(q);
                 state.questions = finalQs; updateQuestionsUI();
                 
-                loader.classList.add('hidden');
-                getEl('questionsListArea').classList.remove('hidden');
-                getEl('btnToStep3').classList.remove('hidden');
-
-            } catch(e) {
-                alert("Error: " + e.message);
-                loader.classList.add('hidden');
-                btn.classList.remove('hidden');
-            }
+                loader.classList.add('hidden'); getEl('questionsListArea').classList.remove('hidden'); getEl('btnToStep3').classList.remove('hidden');
+            } catch(e) { alert("Error: " + e.message); loader.classList.add('hidden'); btn.classList.remove('hidden'); }
         }
 
-        // --- TIMER UTILS ---
         function startTimer() {
-            state.startTime = Date.now();
-            state.processedCount = 0;
+            state.startTime = Date.now(); state.processedCount = 0;
             state.timerInterval = setInterval(updateTimerUI, 1000);
             getEl('timeStats').classList.remove('hidden');
         }
@@ -985,61 +779,37 @@
         function updateTimerUI() {
             const elapsedMs = Date.now() - state.startTime;
             const elapsedSec = Math.floor(elapsedMs / 1000);
-            
-            // Format 00:00
             const m = Math.floor(elapsedSec / 60).toString().padStart(2, '0');
             const s = (elapsedSec % 60).toString().padStart(2, '0');
             getEl('elapsedTime').innerHTML = `<i class="far fa-clock"></i> ${m}:${s}`;
             
-            // ETA Calculation
             if(state.processedCount > 0) {
                 const pending = state.questions.filter(q => q.status === 'pending' || q.status === 'retry').length;
-                const avgMsPerQ = elapsedMs / state.processedCount;
-                const remainingMs = avgMsPerQ * pending;
-                const remM = Math.ceil(remainingMs / 60000);
+                const remM = Math.ceil((elapsedMs / state.processedCount) * pending / 60000);
                 getEl('etaTime').textContent = `ETA: ~${remM}m`;
-            } else {
-                getEl('etaTime').textContent = `ETA: Calc...`;
-            }
+            } else { getEl('etaTime').textContent = `ETA: Calc...`; }
         }
 
-        // --- STEP 3: RAG ANALYSIS (UPDATED) ---
+        // STEP 3: RAG ANALYSIS
         async function startQueueProcessing() {
             if(!navigator.onLine) return alert("Sin conexión.");
             
-            // AUTOMATIC ZOMBIE CLEANUP on Start
-            // We find any "done" questions that have empty or too short answers and revert them to pending
+            // Zombie Cleanup
             const zombies = state.questions.filter(q => q.status === 'done' && (!q.answer || q.answer.trim().length < 10));
-            
             if (zombies.length > 0) {
-                console.log(`Auto-cleaning ${zombies.length} zombies...`);
-                // Revert status in memory
                 zombies.forEach(q => { q.status = 'retry'; });
-                
-                // Save changes to DB immediately so we don't lose this reset state
-                const db = await dbPromise;
-                const tx = db.transaction(STORE_QUESTIONS, 'readwrite');
+                const db = await dbPromise; const tx = db.transaction(STORE_QUESTIONS, 'readwrite');
                 zombies.forEach(q => tx.objectStore(STORE_QUESTIONS).put(q));
             }
 
-            // Hide recovery alert if active
             getEl('recoveryAlert').classList.add('hidden');
-            // getEl('btnForceRetry').classList.add('hidden'); // Removed hiding here to keep it visible if needed
-            
-            if (await window.countVectors() === 0) {
-                return alert("ERROR CRÍTICO: No hay base de conocimiento indexada. Ve al Paso 1 y pulsa 'Sincronizar' para crear los vectores antes de analizar.");
-            }
+            if (await window.countVectors() === 0) return alert("ERROR: Indexa el Paso 1 primero.");
 
             showStep(3); state.processing=true; state.abort=new AbortController();
-            getEl('btnStop').classList.remove('hidden');
-            getEl('btnResume').classList.add('hidden');
+            getEl('btnStop').classList.remove('hidden'); getEl('btnResume').classList.add('hidden');
             
-            updateCounterUI(); // Update counter to reflect any zombie resets
-            renderResultsUI(); 
+            updateCounterUI(); renderResultsUI(); startTimer(); 
             
-            startTimer(); // START CLOCK
-            
-            // Pick up pending AND retry (which includes our reset zombies)
             const pending = state.questions.filter(q => q.status==='pending'||q.status==='retry');
             let processedInBatch = 0;
 
@@ -1048,70 +818,59 @@
                 if(!navigator.onLine) { state.processing=false; alert("Conexión perdida."); break; }
 
                 const card = getEl(`card-${q.id}`);
+                const updateStatusUI = (msg, isError = false) => {
+                    if(card) card.querySelector('.status-ind').innerHTML = `<span class="text-${isError?'red':'purple'}-500 text-xs font-bold"><i class="fas fa-${isError?'times':'spinner fa-spin'}"></i> ${msg}</span>`;
+                    getEl('progressStats').textContent = `[ID: ${q.id}] ${msg}`;
+                };
+
                 if(card) {
                     card.scrollIntoView({behavior:'smooth',block:'center'});
                     card.classList.add('border-intiza-blue','shadow-md');
-                    card.querySelector('.status-ind').innerHTML=`<i class="fas fa-search text-purple-500"></i> Buscando contexto...`;
                 }
-                getEl('progressStats').textContent=`Buscando info para ID ${q.id}...`;
+                
+                updateStatusUI("Vectorizando...");
+                await sleep(100); // Breathe UI
 
                 try {
                     const qEmbedding = await getEmbedding(q.text);
-                    if(!qEmbedding) throw new Error("No se pudo vectorizar la pregunta (Fallo motor híbrido).");
+                    if(!qEmbedding) throw new Error("Fallo en vectorización.");
 
-                    const relevantChunks = await findRelevantChunks(qEmbedding, 8); // TOP 8 for Diversity
-                    
-                    if(relevantChunks.length === 0) throw new Error("No se encontró información relevante.");
-                    
+                    updateStatusUI("Buscando en Base...");
+                    const relevantChunks = await findRelevantChunks(qEmbedding, 8); 
+                    if(relevantChunks.length === 0) throw new Error("No hay info relevante.");
                     const contextText = relevantChunks.map(c => `[Fuente: ${c.docName}]\n${c.text}`).join('\n\n');
-                    
                     const tokenEst = Math.ceil(contextText.length / 4) + 200; 
-                    if(card) card.querySelector('.status-ind').innerHTML=`<span class="text-xs text-gray-500 mr-2"><i class="fas fa-coins"></i> ${tokenEst} tokens</span> <i class="fas fa-pen-nib text-intiza-blue"></i> Redactando...`;
-
+                    
+                    updateStatusUI(`Redactando (${tokenEst} tks)...`);
                     const extraContext = getEl('extraInstructions').value.trim();
 
-                    // UPDATED CISO PERSONA PROMPT
                     const prompt = `
-                        ROL: Actúas como el CISO de INTIZA. Estás respondiendo un cuestionario de auditoría para un Cliente Corporativo.
-                        TONO: Usa primera persona del plural ("Nosotros", "Nuestra plataforma"). Sé profesional, tranquilizador y orientado a la venta/confianza.
+                        ROL: Actúas como el CISO de INTIZA. Estás respondiendo un cuestionario de auditoría.
+                        TONO: Usa primera persona del plural. Sé profesional, tranquilizador y orientado a la venta.
                         INSTRUCCIÓN: Si un documento dice "El proveedor debe...", tú responde "Cumplimos con...", asumiendo que Intiza es el proveedor.
-                        ${extraContext ? `INSTRUCCIONES ADICIONALES DE CONTEXTO (PRIORIDAD ALTA): "${extraContext}"` : ''}
+                        ${extraContext ? `ADICIONAL: "${extraContext}"` : ''}
 
-                        CONTEXTO (Fragmentos recuperados de la biblioteca normativa interna):
+                        CONTEXTO:
                         """${contextText}"""
                         
-                        PREGUNTA DEL CLIENTE: "${q.text}"
+                        PREGUNTA: "${q.text}"
                         
-                        INSTRUCCIONES CLAVE:
-                        1. Sintetiza la información de los fragmentos.
-                        2. Si la respuesta no está, di "No se encontró información específica en nuestra base de conocimiento actual".
-                        3. Cita explícitamente el nombre del documento del que sacas cada dato.
-                        4. FORMATO FINAL OBLIGATORIO: Al final de la respuesta, añade una línea con: "FUENTES CLAVE: [NombreDoc1], [NombreDoc2]"
+                        REGLAS:
+                        1. Sintetiza.
+                        2. Si no está, di "No se encontró información en la base actual".
+                        3. OBLIGATORIO: Añade "FUENTES CLAVE: [Doc1], [Doc2]" al final.
                     `;
 
                     trackRequest(tokenEst);
                     
-                    // Throttle protection: Wait 500ms before sending request even in Tier 1
-                    await sleep(500); 
-
-                    const ans = await askGeminiWithRetry(prompt, false, state.abort.signal);
+                    const ans = await askGeminiWithRetry(prompt, false, state.abort.signal, updateStatusUI);
                     
-                    // CRASH GUARD: Validate Answer before saving
                     if(ans && ans.trim().length > 10) {
-                        q.status='done'; q.answer=ans; 
-                        await window.saveQ(q); 
-                        
-                        // Update visual status immediately to check
-                        if(card) {
-                            card.querySelector('.status-ind').innerHTML = '<i class="fas fa-check text-green-500"></i>';
-                        }
-                    } else {
-                        throw new Error("Respuesta vacía de la IA");
-                    }
+                        q.status='done'; q.answer=ans; await window.saveQ(q); 
+                        if(card) card.querySelector('.status-ind').innerHTML = '<i class="fas fa-check text-green-500"></i>';
+                    } else { throw new Error("Respuesta vacía IA"); }
 
                     renderCard(card,q); updateCounterUI(); updateSourcesIndex();
-                    
-                    // Update stats
                     state.processedCount++;
                     
                 } catch(e) {
@@ -1124,14 +883,9 @@
                 if(card) card.classList.remove('border-intiza-blue','shadow-md');
                 
                 processedInBatch++;
-                // INCREASED BATCH SIZE FOR TIER 1
-                if(processedInBatch >= 10) {
-                    await sleep(2000); 
-                    processedInBatch = 0;
-                }
+                if(processedInBatch >= 10) { await sleep(2000); processedInBatch = 0; }
             }
-            state.processing=false;
-            clearInterval(state.timerInterval); // Stop clock
+            state.processing=false; clearInterval(state.timerInterval); 
             getEl('btnStop').classList.add('hidden');
             if(state.questions.some(q=>q.status==='pending')) getEl('btnResume').classList.remove('hidden');
             getEl('progressStats').textContent = "Proceso finalizado/pausado.";
@@ -1139,31 +893,28 @@
 
         function stopProcessing() { 
             if(state.abort) state.abort.abort(); 
-            state.processing=false; 
-            clearInterval(state.timerInterval);
-            getEl('progressStats').textContent = "Pausado por el usuario.";
-            getEl('btnStop').classList.add('hidden');
-            getEl('btnResume').classList.remove('hidden');
+            state.processing=false; clearInterval(state.timerInterval);
+            getEl('progressStats').textContent = "Pausado.";
+            getEl('btnStop').classList.add('hidden'); getEl('btnResume').classList.remove('hidden');
         }
         
-        async function askGeminiWithRetry(text, isJson, signal) {
+        async function askGeminiWithRetry(text, isJson, signal, updateStatusFn) {
             let att = 0;
             while(att < 5) { 
                 try { 
                     return await callGemini(text, isJson, signal); 
                 } catch(e) { 
                     const msg = e.message.toLowerCase();
-                    if(msg.includes('429') || msg.includes('overloaded') || msg.includes('503')) { 
+                    // Catch Rate Limits (429), Overloaded (503), Quota Exceeded, or Fetch errors
+                    if(msg.includes('429') || msg.includes('overloaded') || msg.includes('503') || msg.includes('quota') || msg.includes('too many') || msg.includes('fetch')) { 
                         att++; 
-                        console.warn(`Intento ${att}: ${e.message}. Esperando...`);
-                        // STRONGER BACKOFF FOR TIER 1 BURSTS (8s base)
-                        await sleep(8000 * att); 
-                    } else {
-                        throw e; 
-                    }
+                        console.warn(`Intento ${att} bloqueado por API. Esperando para reintentar...`);
+                        if(updateStatusFn) updateStatusFn(`Pausa de IA (Reintento ${att}/5)...`);
+                        await sleep(6000 * att); // Espera progresiva
+                    } else { throw e; }
                 }
             }
-            throw new Error("El servidor de IA está saturado. Intenta de nuevo más tarde.");
+            throw new Error("Servidor saturado tras 5 intentos.");
         }
 
         async function callGemini(text, json, signal) {
@@ -1175,21 +926,10 @@
         }
 
         function updateQuestionsUI() { getEl('qCount').textContent = state.questions.length; getEl('questionsList').innerHTML = state.questions.map(q=>`<div class="flex gap-2 text-xs p-1 border-b"><b class="text-intiza-blue min-w-[30px]">${q.id}</b> <span>${q.text}</span></div>`).join(''); }
-        
-        // --- HONEST COUNTER FIX ---
-        // Only count as DONE if status is 'done' AND answer has content > 10 chars
         function updateCounterUI() { 
             const doneCount = state.questions.filter(q => q.status === 'done' && q.answer && q.answer.length > 10).length;
             getEl('qCounterDisplay').textContent = `${doneCount} / ${state.questions.length}`; 
-            
-            // Check for visibility of rescue button
-            /* Always show if not 100% complete OR if explicitly requested in HTML logic */
-            if (doneCount < state.questions.length) {
-                 getEl('btnForceRetry').classList.remove('hidden'); 
-            } else {
-                 // Even if 100%, keep it hidden unless manually triggered by zombie check
-                 // but we removed the hidden logic for simplicity in v10.6
-            }
+            if (doneCount < state.questions.length) getEl('btnForceRetry').classList.remove('hidden'); 
         }
         
         function renderResultsUI() { getEl('resultsContainer').innerHTML=''; state.questions.forEach(q=>renderCard(null,q,true)); }
@@ -1197,150 +937,66 @@
         function renderCard(card, q, create=false) {
             if(create) {
                 const d = document.createElement('div'); d.id=`card-${q.id}`; d.className="bg-white p-4 rounded border border-slate-200 text-sm mb-4 transition-all";
-                
-                // --- DEBUG STATUS LINE ---
-                const debugInfo = `<div class="text-[9px] text-slate-300 font-mono mb-1">ID: ${q.id} | Status: ${q.status} | Len: ${q.answer ? q.answer.length : 0}</div>`;
-                
-                // Added Flag Button back & Individual Retry Button
+                const debugInfo = `<div class="text-[9px] text-slate-300 font-mono mb-1">ID: ${q.id} | Status: ${q.status}</div>`;
                 d.innerHTML = `
                     ${debugInfo}
                     <div class="flex justify-between mb-2">
                         <div class="flex gap-2"><span class="font-bold bg-slate-100 px-2 rounded">${q.id}</span> <span class="status-ind text-xs text-slate-400"></span></div>
-                        <div class="flex gap-2">
-                             <button onclick="reproc('${q.id}')" class="text-blue-300 hover:text-blue-500" title="Reintentar Individualmente"><i class="fas fa-sync"></i></button>
-                             <button onclick="toggleFb('${q.id}')" class="text-slate-300 hover:text-red-500 transition-colors" title="Corregir respuesta"><i class="fas fa-flag"></i></button>
-                        </div>
+                        <div class="flex gap-2"><button onclick="reproc('${q.id}')" class="text-blue-300 hover:text-blue-500"><i class="fas fa-sync"></i></button><button onclick="toggleFb('${q.id}')" class="text-slate-300 hover:text-red-500"><i class="fas fa-flag"></i></button></div>
                     </div>
                     <p class="font-medium mb-2 text-slate-800">${q.text}</p>
                     <div class="ans-body text-slate-600 border-t pt-2 mt-2 leading-relaxed">${q.answer?format(q.answer):'<span class="italic text-slate-400">Pendiente...</span>'}</div>
-                    <!-- Feedback Box -->
-                    <div id="fb-${q.id}" class="hidden mt-3 bg-red-50 p-3 rounded border border-red-100">
-                        <p class="text-[10px] font-bold text-red-700 mb-1">CORRECCIÓN MANUAL (FEEDBACK)</p>
-                        <textarea id="tx-${q.id}" class="w-full text-xs p-2 border border-red-200 rounded mb-2 focus:outline-none focus:border-red-400" rows="2" placeholder="Ej: No usamos tokens físicos, usamos App Authenticator..."></textarea>
-                        <div class="flex justify-end">
-                            <button onclick="reproc('${q.id}')" class="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-1 rounded font-bold transition">Re-Analizar con Corrección</button>
-                        </div>
-                    </div>
+                    <div id="fb-${q.id}" class="hidden mt-3 bg-red-50 p-3 rounded border border-red-100"><textarea id="tx-${q.id}" class="w-full text-xs p-2" rows="2" placeholder="Critica..."></textarea><div class="flex justify-end"><button onclick="reproc('${q.id}')" class="bg-red-500 text-white text-xs px-3 py-1 rounded">Re-Analizar</button></div></div>
                 `;
                 getEl('resultsContainer').appendChild(d);
             } else if(card) {
-                // VISUAL INCONSISTENCY FIX
-                if(q.status === 'done' && (!q.answer || q.answer.length < 10)) {
-                    card.querySelector('.status-ind').innerHTML = '<i class="fas fa-exclamation-triangle text-orange-500" title="Respuesta vacía (Zombie)"></i>';
-                } else {
-                    card.querySelector('.status-ind').innerHTML = q.status==='done'?'<i class="fas fa-check text-green-500"></i>':q.status==='error'?'<i class="fas fa-times text-red-500"></i>':'';
-                }
+                if(q.status === 'done' && (!q.answer || q.answer.length < 10)) card.querySelector('.status-ind').innerHTML = '<i class="fas fa-exclamation-triangle text-orange-500"></i>';
+                else card.querySelector('.status-ind').innerHTML = q.status==='done'?'<i class="fas fa-check text-green-500"></i>':q.status==='error'?'<i class="fas fa-times text-red-500"></i>':'';
                 card.querySelector('.ans-body').innerHTML = format(q.answer);
             }
         }
         function format(t) { return t?t.replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>'):''; }
         
         function updateSourcesIndex() { 
-            const container = getEl('sourcesSummaryContainer');
-            const list = getEl('sourcesList');
-            const sources = new Set();
+            const container = getEl('sourcesSummaryContainer'); const list = getEl('sourcesList'); const sources = new Set();
             state.questions.forEach(q => {
                 if(q.status === 'done' && q.answer) {
                     const matches = q.answer.match(/FUENTES CLAVE: (.*)/g);
                     if(matches) matches.forEach(m => m.replace('FUENTES CLAVE:', '').trim().split(',').map(d => d.trim().replace(/^\[|\]$/g, '').replace(/\.$/, '')).forEach(doc => { if(doc.length > 2) sources.add(doc); }));
                 }
             });
-            if (sources.size > 0) {
-                container.classList.remove('hidden');
-                list.innerHTML = '';
-                sources.forEach(s => list.innerHTML += `<div class="flex items-center gap-1"><i class="fas fa-file-alt text-slate-400 text-[10px]"></i> <span>${s}</span></div>`);
-            }
+            if (sources.size > 0) { container.classList.remove('hidden'); list.innerHTML = ''; sources.forEach(s => list.innerHTML += `<div class="flex items-center gap-1"><i class="fas fa-file-alt text-slate-400 text-[10px]"></i> <span>${s}</span></div>`); }
         }
         
         window.copyAllResults = function() { navigator.clipboard.writeText(getEl('resultsContainer').innerText); alert("Copiado"); };
         window.sendEmail = function() { window.location.href=`mailto:?subject=Reporte&body=${encodeURIComponent(getEl('resultsContainer').innerText.substring(0,1800))}`; };
         
         window.reproc = async function(id) {
-            const fbElem = getEl(`tx-${id}`);
-            const fb = fbElem ? fbElem.value : ""; 
-            
-            const q = state.questions.find(x=>x.id===id);
+            const fb = getEl(`tx-${id}`)?.value || ""; const q = state.questions.find(x=>x.id===id);
             if(getEl(`fb-${id}`)) getEl(`fb-${id}`).classList.add('hidden');
-            
-            const card = getEl(`card-${id}`);
-            card.querySelector('.ans-body').innerHTML='<div class="flex items-center gap-2 text-orange-500"><i class="fas fa-sync fa-spin"></i> Re-procesando...</div>';
-            
+            const card = getEl(`card-${id}`); card.querySelector('.ans-body').innerHTML='<div class="flex items-center gap-2 text-orange-500"><i class="fas fa-sync fa-spin"></i> Re-procesando...</div>';
             try {
-                // FORCE RE-EMBEDDING
-                const qEmbedding = await getEmbedding(q.text);
-                const relevantChunks = await findRelevantChunks(qEmbedding, 8);
+                const qEmbedding = await getEmbedding(q.text); const relevantChunks = await findRelevantChunks(qEmbedding, 8);
                 const contextText = relevantChunks.map(c => `[Fuente: ${c.docName}]\n${c.text}`).join('\n\n');
-                
-                let prompt = "";
-                if(fb) {
-                     // CORRECTION MODE
-                     prompt = `
-                        ROL: CISO de INTIZA (Corrección de Respuesta).
-                        CONTEXTO TÉCNICO: """${contextText}"""
-                        PREGUNTA: "${q.text}"
-                        CRÍTICA DEL HUMANO: "${fb}"
-                        INSTRUCCIÓN: Reescribe la respuesta obedeciendo la crítica.
-                        FORMATO FINAL: Añade "FUENTES CLAVE: [...]"
-                    `;
-                } else {
-                    // STANDARD RETRY MODE
-                    prompt = `
-                        ROL: CISO de INTIZA.
-                        CONTEXTO: """${contextText}"""
-                        PREGUNTA: "${q.text}"
-                        INSTRUCCIÓN: Responde profesionalmente como proveedor SaaS.
-                        FORMATO FINAL: Añade "FUENTES CLAVE: [...]"
-                    `;
-                }
-                
-                q.answer = await askGeminiWithRetry(prompt, false, null); 
-                q.status='done'; 
-                await window.saveQ(q); 
-                renderCard(card,q); 
-                updateCounterUI();
-            } catch(e) { 
-                alert("Error: " + e.message);
-                q.status='error';
-                renderCard(card,q);
-            }
+                let prompt = fb ? `ROL: CISO de INTIZA (Corrección). CONTEXTO: """${contextText}""" PREGUNTA: "${q.text}" CRÍTICA: "${fb}" REGLA: Obedece la crítica. FUENTES CLAVE: [...]` : `ROL: CISO de INTIZA. CONTEXTO: """${contextText}""" PREGUNTA: "${q.text}" INSTRUCCIÓN: Responde profesionalmente. FUENTES CLAVE: [...]`;
+                q.answer = await askGeminiWithRetry(prompt, false, null, null); q.status='done'; await window.saveQ(q); 
+                renderCard(card,q); updateCounterUI();
+            } catch(e) { q.status='error'; renderCard(card,q); }
         };
         
         function toggleFb(id) { getEl(`fb-${id}`).classList.toggle('hidden'); }
-        function getIcon(s) { return s==='done'?'<i class="fas fa-check text-intiza-blue"></i>':s==='error'?'<i class="fas fa-times text-red-500"></i>':s; }
 
-        // --- NEW FORCE RETRY FUNCTION (FIXED & MANUAL) ---
         window.forceRetryPending = async function() {
-            if(!confirm("¿Estás seguro de reiniciar las preguntas incompletas?")) return;
-
+            if(!confirm("¿Reiniciar preguntas incompletas?")) return;
             const zombies = state.questions.filter(q => q.status === 'done' && (!q.answer || q.answer.trim().length < 5));
             const stuck = state.questions.filter(q => q.status === 'pending' || q.status === 'processing' || q.status === 'retry');
-
-            let count = 0;
-            
-            // Reset Zombies
             for(const q of zombies) {
-                q.status = 'retry';
-                q.attempts = 0;
-                await window.saveQ(q);
-                // Visual update immediately to show it's queued
+                q.status = 'retry'; q.attempts = 0; await window.saveQ(q);
                 const card = getEl(`card-${q.id}`);
-                if(card) {
-                    card.querySelector('.status-ind').innerHTML = '<span class="text-orange-500 font-bold"><i class="fas fa-history"></i> En cola (Forzado)</span>';
-                    card.querySelector('.ans-body').innerHTML = '<span class="italic text-slate-400">Esperando reintento...</span>';
-                }
-                count++;
+                if(card) { card.querySelector('.status-ind').innerHTML = '<span class="text-orange-500"><i class="fas fa-history"></i> Cola</span>'; card.querySelector('.ans-body').innerHTML = '<span class="italic">Esperando...</span>'; }
             }
-
-            // Immediately update global counter to reflect pending status
             updateCounterUI();
-            
-            if(count > 0 || stuck.length > 0) {
-                alert(`Se encontraron ${count} respuestas vacías y ${stuck.length} pendientes. Reiniciando cola...`);
-                getEl('recoveryAlert').classList.add('hidden'); // Hide alert if it was showing
-                startQueueProcessing();
-            } else {
-                alert("No se detectaron preguntas incompletas o vacías.");
-            }
+            if(zombies.length > 0 || stuck.length > 0) { getEl('recoveryAlert').classList.add('hidden'); startQueueProcessing(); } else { alert("Nada que reiniciar."); }
         };
     </script>
 </body>
