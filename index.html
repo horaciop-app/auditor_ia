@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTIZA CISO AI OFFICER v10.8 (Stable Core)</title>
+    <title>INTIZA CISO AI OFFICER v10.9 (Final Core)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -112,7 +112,7 @@
             <div class="flex items-center gap-3">
                 <div class="text-xs text-right hidden sm:block">
                     <div class="font-bold text-white opacity-90">MODO CORPORATIVO</div>
-                    <div class="text-green-300 text-[10px] font-mono">v10.8 Stable Core</div>
+                    <div class="text-green-300 text-[10px] font-mono">v10.9 Final Core</div>
                 </div>
             </div>
         </div>
@@ -332,7 +332,7 @@
                 </h3>
                 <div id="questionsList" class="bg-slate-50 p-4 rounded border border-slate-200 max-h-60 overflow-y-auto space-y-2 text-sm scrollbar-thin"></div>
                 
-                <!-- INSTRUCCIONES ADICIONALES -->
+                <!-- INSTRUCCIONES ADICIONALES (En el paso 2, como pediste) -->
                 <div class="mt-4 pt-4 border-t border-slate-100">
                     <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                         <i class="fas fa-comment-dots text-intiza-blue"></i> Instrucciones de Vuelo (Contexto Adicional)
@@ -537,7 +537,7 @@
             } catch (e) { return false; }
         }
 
-        // INIT
+        // INIT & AUTO-HEALING (Soluciona el bug de ID duplicados automáticamente)
         window.onload = async function() {
             if(state.apiKey) {
                 getEl('apiKeyInput').value = state.apiKey;
@@ -559,9 +559,25 @@
             getEl('vectorStatus').textContent = vCount > 0 ? "Indexado y Listo" : "Requiere Indexación";
             getEl('vectorStatus').className = vCount > 0 ? "text-[9px] text-green-600 font-bold mt-0.5" : "text-[9px] text-red-500 font-bold mt-0.5";
             
-            const qs = await window.loadQs();
+            let qs = await window.loadQs();
             if(qs.length > 0) {
-                state.questions = qs.sort((a,b) => parseInt(a.id) - parseInt(b.id)); // Num sort
+                // AUTO-SANACIÓN DE BASE DE DATOS (Arregla el bug visual de IDs rotos/pisados)
+                let dbNeedsHeal = false;
+                qs = qs.map((q, index) => {
+                    if (q.id === "ID" || !q.id || isNaN(parseInt(q.id))) {
+                        q.id = String(index + 1);
+                        dbNeedsHeal = true;
+                    }
+                    return q;
+                });
+
+                if (dbNeedsHeal) {
+                    console.log("Auto-Sanando Base de datos de preguntas (IDs duplicados encontrados)...");
+                    await dbOp('readwrite', STORE_QUESTIONS, s => { s.clear(); });
+                    for(const healedQ of qs) await window.saveQ(healedQ);
+                }
+
+                state.questions = qs.sort((a,b) => parseInt(a.id) - parseInt(b.id));
                 updateQuestionsUI(); renderResultsUI(); enableStep(3);
                 
                 const pending = state.questions.filter(q => q.status === 'pending' || q.status === 'retry');
@@ -733,7 +749,10 @@
 
                 for (let i = 0; i < chunks.length; i++) {
                     loader.querySelector('span').textContent = `Analizando bloque ${i + 1}/${chunks.length}...`;
+                    
+                    // PROMPT ARREGLADO: Ya no le pedimos a la IA que cree un "id", solo el texto.
                     const prompt = `ACTÚA COMO CISO. Extrae preguntas de CUMPLIMIENTO/AUDITORÍA. JSON: [{"text":"Pregunta"}]. Texto: ${chunks[i]}`;
+                    
                     trackRequest(Math.ceil(prompt.length/4));
                     const res = await askGeminiWithRetry(prompt, true, null);
                     
@@ -746,7 +765,7 @@
                             const norm = q.text ? q.text.toLowerCase().trim() : "";
                             if(norm.length > 5 && !seenTexts.has(norm)) {
                                 seenTexts.add(norm);
-                                allQs.push({ text: q.text }); // IGNORAR IDS DE GEMINI PARA EVITAR DUPLICADOS
+                                allQs.push({ text: q.text }); 
                             }
                         });
                     }
@@ -754,9 +773,9 @@
                 }
                 if(allQs.length === 0) throw new Error("No se extrajeron preguntas.");
                 
-                // ASIGNACIÓN DE IDS ÚNICOS Y SECUENCIALES FORZADOS (FIX BUG VISUAL)
+                // ASIGNACIÓN DE IDS ÚNICOS FORZADOS DESDE CÓDIGO (No desde la IA)
                 const finalQs = allQs.map((q, index) => ({
-                    id: String(index + 1),
+                    id: String(index + 1), // "1", "2", "3"... Garantiza que nunca se pisen en pantalla
                     text: q.text,
                     status: 'pending',
                     attempts: 0
@@ -794,7 +813,6 @@
         async function startQueueProcessing() {
             if(!navigator.onLine) return alert("Sin conexión.");
             
-            // Zombie Cleanup
             const zombies = state.questions.filter(q => q.status === 'done' && (!q.answer || q.answer.trim().length < 10));
             if (zombies.length > 0) {
                 zombies.forEach(q => { q.status = 'retry'; });
@@ -818,9 +836,17 @@
                 if(!navigator.onLine) { state.processing=false; alert("Conexión perdida."); break; }
 
                 const card = getEl(`card-${q.id}`);
-                const updateStatusUI = (msg, isError = false) => {
-                    if(card) card.querySelector('.status-ind').innerHTML = `<span class="text-${isError?'red':'purple'}-500 text-xs font-bold"><i class="fas fa-${isError?'times':'spinner fa-spin'}"></i> ${msg}</span>`;
-                    getEl('progressStats').textContent = `[ID: ${q.id}] ${msg}`;
+                
+                // Función de UI ultra-fuerte para mostrar avisos de Reintentos (Rate Limit)
+                const updateStatusUI = (msg, isError = false, isWarn = false) => {
+                    if(card) {
+                        let colorClass = 'text-purple-500';
+                        let icon = 'fa-spinner fa-spin';
+                        if(isError) { colorClass = 'text-red-500'; icon = 'fa-times'; }
+                        else if(isWarn) { colorClass = 'text-orange-500'; icon = 'fa-hourglass-half'; }
+                        card.querySelector('.status-ind').innerHTML = `<span class="${colorClass} text-xs font-bold"><i class="fas ${icon}"></i> ${msg}</span>`;
+                    }
+                    getEl('progressStats').textContent = `[P. ${q.id}] ${msg}`;
                 };
 
                 if(card) {
@@ -829,7 +855,7 @@
                 }
                 
                 updateStatusUI("Vectorizando...");
-                await sleep(100); // Breathe UI
+                await sleep(100);
 
                 try {
                     const qEmbedding = await getEmbedding(q.text);
@@ -863,6 +889,9 @@
 
                     trackRequest(tokenEst);
                     
+                    // ESCUDO ANTI-RÁFAGAS: Esperar 1.5s (1500ms) entre peticiones para no saturar Tier 1
+                    await sleep(1500); 
+                    
                     const ans = await askGeminiWithRetry(prompt, false, state.abort.signal, updateStatusUI);
                     
                     if(ans && ans.trim().length > 10) {
@@ -881,9 +910,6 @@
                 }
                 
                 if(card) card.classList.remove('border-intiza-blue','shadow-md');
-                
-                processedInBatch++;
-                if(processedInBatch >= 10) { await sleep(2000); processedInBatch = 0; }
             }
             state.processing=false; clearInterval(state.timerInterval); 
             getEl('btnStop').classList.add('hidden');
@@ -905,12 +931,12 @@
                     return await callGemini(text, isJson, signal); 
                 } catch(e) { 
                     const msg = e.message.toLowerCase();
-                    // Catch Rate Limits (429), Overloaded (503), Quota Exceeded, or Fetch errors
+                    // Captura fuerte de Cuota API
                     if(msg.includes('429') || msg.includes('overloaded') || msg.includes('503') || msg.includes('quota') || msg.includes('too many') || msg.includes('fetch')) { 
                         att++; 
                         console.warn(`Intento ${att} bloqueado por API. Esperando para reintentar...`);
-                        if(updateStatusFn) updateStatusFn(`Pausa de IA (Reintento ${att}/5)...`);
-                        await sleep(6000 * att); // Espera progresiva
+                        if(updateStatusFn) updateStatusFn(`Pausa de IA (Reintento ${att}/5)...`, false, true); // Aviso Visual
+                        await sleep(8000 * att); // Espera 8s, 16s, 24s...
                     } else { throw e; }
                 }
             }
@@ -920,8 +946,13 @@
         async function callGemini(text, json, signal) {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${state.model}:generateContent?key=${state.apiKey}`;
             const body = { contents:[{parts:[{text}]}] }; if(json) body.generationConfig={responseMimeType:"application/json"};
+            
             const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body), signal });
-            if(!r.ok) { const err = await r.json(); throw new Error(err.error?.message || r.statusText); }
+            if(!r.ok) { 
+                let errMsg = r.statusText;
+                try { const errObj = await r.json(); errMsg = errObj.error?.message || errMsg; } catch(e) {}
+                throw new Error(`[API ${r.status}] ${errMsg}`); // Ahora el código siempre verá "429" explícitamente si falla la red
+            }
             return (await r.json()).candidates[0].content.parts[0].text;
         }
 
@@ -937,7 +968,7 @@
         function renderCard(card, q, create=false) {
             if(create) {
                 const d = document.createElement('div'); d.id=`card-${q.id}`; d.className="bg-white p-4 rounded border border-slate-200 text-sm mb-4 transition-all";
-                const debugInfo = `<div class="text-[9px] text-slate-300 font-mono mb-1">ID: ${q.id} | Status: ${q.status}</div>`;
+                const debugInfo = `<div class="text-[9px] text-slate-300 font-mono mb-1">Q.ID: ${q.id} | Status: ${q.status}</div>`;
                 d.innerHTML = `
                     ${debugInfo}
                     <div class="flex justify-between mb-2">
