@@ -21,7 +21,6 @@
         }
     </script>
     
-    <!-- LIBRERÍAS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -30,7 +29,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
-    <!-- MOTOR NEURONAL LOCAL -->
     <script type="module">
         import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.16.0';
         
@@ -95,7 +93,6 @@
         });
     </script>
 
-    <!-- Header -->
     <header class="bg-intiza-blue text-white p-4 shadow-lg sticky top-0 z-50">
         <div class="container mx-auto flex justify-between items-center">
             <div class="flex items-center gap-3">
@@ -118,17 +115,14 @@
         </div>
     </header>
 
-    <!-- Main Content -->
     <main class="flex-grow container mx-auto p-4 md:p-8 max-w-4xl">
         
-        <!-- DASHBOARD DE CONSUMO -->
         <div class="mb-4 bg-white p-4 rounded-lg shadow-sm border border-slate-200">
             <h3 class="text-xs font-bold text-slate-400 uppercase mb-3 tracking-wider flex items-center gap-2">
                 <i class="fas fa-chart-line"></i> Monitor de Rendimiento
             </h3>
 
             <div class="grid grid-cols-3 gap-4">
-                <!-- RPM -->
                 <div>
                     <div class="text-[10px] font-bold text-slate-500 uppercase flex justify-between">
                         <span>Peticiones IA</span>
@@ -142,7 +136,6 @@
                     </div>
                 </div>
                 
-                <!-- Modelo Local -->
                 <div>
                     <div class="text-[10px] font-bold text-slate-500 uppercase flex justify-between">
                         <span>Motor Local</span>
@@ -156,7 +149,6 @@
                     </div>
                 </div>
 
-                <!-- Timer -->
                 <div>
                     <div class="text-[10px] font-bold text-slate-500 uppercase flex justify-between">
                         <span>Estado Vectores</span>
@@ -170,7 +162,6 @@
             </div>
         </div>
 
-        <!-- API Key & Auto-Detect -->
         <div id="apiKeySection" class="mb-8 bg-white p-6 rounded-lg shadow-sm border border-slate-200 border-l-4 border-l-intiza-blue">
             <div class="flex justify-between items-center mb-2">
                 <label class="block text-sm font-bold text-slate-700">Configuración de IA</label>
@@ -200,7 +191,6 @@
                 </button>
             </div>
 
-            <!-- Connection Status -->
             <div id="connectionStatus" class="hidden mt-3 p-2 bg-slate-50 border border-slate-200 rounded text-xs font-mono text-slate-600">
                 <div class="flex items-center gap-2">
                     <div class="loader w-3 h-3 border-2" id="detectLoader"></div>
@@ -213,7 +203,6 @@
             </p>
         </div>
 
-        <!-- Progress Steps -->
         <div class="flex justify-between mb-8 text-sm font-medium select-none">
             <div id="step1-ind" class="flex flex-col items-center step-active w-1/3 cursor-pointer transition-all" onclick="showStep(1)">
                 <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center mb-1 bg-white">1</div>
@@ -229,7 +218,6 @@
             </div>
         </div>
 
-        <!-- STEP 1: Knowledge Base -->
         <div id="step1" class="step-content bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
@@ -256,7 +244,6 @@
                 </div>
             </div>
 
-            <!-- VECTORIZACIÓN STATUS -->
             <div id="vectorizationArea" class="mb-4 hidden">
                 <div class="bg-amber-50 border border-amber-100 p-3 rounded-lg">
                     <div class="flex justify-between text-xs font-bold text-amber-700 mb-1">
@@ -294,14 +281,12 @@
             </div>
         </div>
 
-        <!-- STEP 2: Questions Setup -->
         <div id="step2" class="hidden step-content bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-lg font-semibold text-slate-800">2. Cargar Preguntas</h2>
                 <button onclick="window.clearDB('questions')" class="text-xs text-orange-500 hover:bg-orange-50 border border-orange-200 px-2 py-1 rounded transition"><i class="fas fa-eraser"></i> Limpiar</button>
             </div>
             
-            <!-- File Upload -->
             <div class="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:bg-slate-50 transition-colors cursor-pointer relative group">
                 <input type="file" id="questionFiles" multiple accept=".pdf,.docx,.xlsx,.xls" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="checkStep2Readiness()">
                 <div class="flex flex-col items-center pointer-events-none">
@@ -315,7 +300,6 @@
             </div>
             <div id="selectedQuestionsFiles" class="mt-2 text-xs text-slate-500 font-mono hidden text-center"></div>
 
-            <!-- Manual Text -->
             <div class="mt-6 relative">
                 <div class="absolute top-0 left-0 -mt-3 ml-3 bg-white px-2 text-xs font-bold text-slate-400">O PEGAR PREGUNTAS (TEXTO PLANO)</div>
                 <textarea id="manualQuestionText" 
@@ -332,7 +316,6 @@
                 </h3>
                 <div id="questionsList" class="bg-slate-50 p-4 rounded border border-slate-200 max-h-60 overflow-y-auto space-y-2 text-sm scrollbar-thin"></div>
                 
-                <!-- INSTRUCCIONES ADICIONALES (En el paso 2, como pediste) -->
                 <div class="mt-4 pt-4 border-t border-slate-100">
                     <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                         <i class="fas fa-comment-dots text-intiza-blue"></i> Instrucciones de Vuelo (Contexto Adicional)
@@ -352,9 +335,7 @@
             </div>
         </div>
 
-        <!-- STEP 3: Results -->
         <div id="step3" class="hidden step-content bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <!-- RECOVERY ALERT -->
             <div id="recoveryAlert" class="hidden mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg flex justify-between items-center shadow-sm">
                 <div class="flex items-center gap-3">
                     <div class="bg-amber-100 p-2 rounded-full text-amber-600"><i class="fas fa-exclamation-triangle"></i></div>
@@ -371,7 +352,6 @@
                         <h2 class="text-lg font-semibold text-slate-800">3. Informe CISO</h2>
                         <div class="text-xs text-slate-500 font-bold" id="progressStats">Listo</div>
                     </div>
-                    <!-- CLOCK & ETA -->
                     <div id="timeStats" class="hidden text-xs font-mono text-slate-500 bg-white border px-2 py-1 rounded">
                         <span id="elapsedTime"><i class="far fa-clock"></i> 00:00</span>
                         <span class="mx-1 text-slate-300">|</span>
@@ -380,7 +360,6 @@
                 </div>
                 
                 <div class="flex items-center gap-3">
-                    <!-- CONTADOR DE PROGRESO -->
                     <div id="qCounterDisplay" class="text-sm font-bold text-intiza-blue bg-white border border-blue-100 px-3 py-1 rounded shadow-sm">
                         0 / 0
                     </div>
@@ -404,14 +383,12 @@
             
             <div id="resultsContainer" class="space-y-6 pb-10 min-h-[300px]"></div>
 
-            <!-- ÍNDICE DE FUENTES -->
             <div id="sourcesSummaryContainer" class="hidden mt-8 p-4 bg-slate-50 rounded-lg border border-slate-200">
                 <h4 class="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
                     <i class="fas fa-book text-intiza-blue"></i> Índice de Documentos Citados
                 </h4>
                 <div id="sourcesList" class="text-xs text-slate-600 space-y-1 columns-1 sm:columns-2">
-                    <!-- Dynamic Content -->
-                </div>
+                    </div>
             </div>
 
             <div class="mt-6 flex justify-start"><button onclick="showStep(2)" class="text-slate-500 hover:text-slate-700 font-medium px-4 py-2">Atrás</button></div>
@@ -688,17 +665,37 @@
 
             try {
                 if(!state.apiKey) throw new Error("Configura tu API Key primero.");
-                const files = await (await fetch('manifest.json?t=' + new Date().getTime())).json();
+                
+                // 1. Fetch manifest with strict cache busting
+                const manifestRes = await fetch('manifest.json?t=' + Date.now(), { cache: 'no-store' });
+                if(!manifestRes.ok) throw new Error("No se encontró manifest.json");
+                const files = await manifestRes.json();
+
+                // 2. Clear old documents to reflect exact Git state
+                const db = await dbPromise;
+                const tx = db.transaction([STORE_DOCS], 'readwrite');
+                tx.objectStore(STORE_DOCS).clear();
+
                 let newDocs = [];
                 for(const fileName of files) {
-                    const fRes = await fetch(`fuentes/${encodeURIComponent(fileName)}`);
-                    if(!fRes.ok) continue;
+                    log(`Descargando: ${fileName}...`);
+                    // 3. Fetch files with strict cache busting
+                    const fRes = await fetch(`fuentes/${encodeURIComponent(fileName)}?t=${Date.now()}`, { cache: 'no-store' });
+                    if(!fRes.ok) {
+                        log(`No se pudo descargar: ${fileName}`, 'error');
+                        continue;
+                    }
                     const blob = await fRes.blob();
                     let text = fileName.toLowerCase().endsWith('.docx') ? await extractTextFromDOCX(blob) : await extractTextFromPDF(blob); 
-                    await window.saveDoc(fileName, text, 'server'); newDocs.push({name: fileName, content: text});
+                    await window.saveDoc(fileName, text, 'server'); 
+                    newDocs.push({name: fileName, content: text});
                 }
-                await runIndexingProcess(newDocs); await refreshDocsUI();
-            } catch(e) { alert("Error: " + e.message); } finally { loader.classList.add('hidden'); }
+                
+                log("Archivos descargados. Iniciando Indexado...", 'info');
+                await runIndexingProcess(newDocs);
+                
+                await refreshDocsUI();
+            } catch(e) { alert("Error Sync: " + e.message); log(e.message, 'error'); } finally { loader.classList.add('hidden'); }
         };
 
         async function refreshDocsUI() {
